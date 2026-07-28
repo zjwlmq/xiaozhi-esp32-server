@@ -146,6 +146,7 @@ class TTSProvider(TTSProviderBase):
         self._monitor_task = None  # 监听任务引用
         self.appId = config.get("appid")
         self.access_token = config.get("access_token")
+        self.api_key = (config.get("api_key") or "").strip()
         self.cluster = config.get("cluster")
         self.resource_id = config.get("resource_id")
         self.resource_type = True if self.resource_id == "seed-tts-2.0" else False
@@ -202,9 +203,28 @@ class TTSProvider(TTSProviderBase):
         self.enable_ws_reuse = False if str(enable_ws_reuse_value).lower() == 'false' else True
         self.tts_text = ""
 
-        model_key_msg = check_model_key("TTS", self.access_token)
+        model_key_msg = check_model_key(
+            "TTS", self.api_key or self.access_token
+        )
         if model_key_msg:
             logger.bind(tag=TAG).error(model_key_msg)
+
+    def _build_ws_headers(self):
+        """构造火山引擎 WebSocket 鉴权请求头。
+
+        新版控制台优先使用 API Key；未配置时回退到原有的
+        AppID + Access Token 鉴权，保证旧配置继续可用。
+        """
+        headers = {
+            "X-Api-Resource-Id": self.resource_id,
+            "X-Api-Connect-Id": str(uuid.uuid4()),
+        }
+        if self.api_key:
+            headers["X-Api-Key"] = self.api_key
+        else:
+            headers["X-Api-App-Key"] = self.appId
+            headers["X-Api-Access-Key"] = self.access_token
+        return headers
 
     async def open_audio_channels(self, conn):
         try:
@@ -233,12 +253,7 @@ class TTSProvider(TTSProviderBase):
             # 建立新连接前取消旧监听任务
             await self._cancel_monitor_task()
 
-            ws_header = {
-                "X-Api-App-Key": self.appId,
-                "X-Api-Access-Key": self.access_token,
-                "X-Api-Resource-Id": self.resource_id,
-                "X-Api-Connect-Id": uuid.uuid4(),
-            }
+            ws_header = self._build_ws_headers()
             self.ws = await websockets.connect(
                 self.ws_url, additional_headers=ws_header, max_size=1000000000
             )
@@ -758,12 +773,7 @@ class TTSProvider(TTSProviderBase):
 
             async def _generate_audio():
                 # 创建新的WebSocket连接
-                ws_header = {
-                    "X-Api-App-Key": self.appId,
-                    "X-Api-Access-Key": self.access_token,
-                    "X-Api-Resource-Id": self.resource_id,
-                    "X-Api-Connect-Id": uuid.uuid4(),
-                }
+                ws_header = self._build_ws_headers()
                 ws = await websockets.connect(
                     self.ws_url, additional_headers=ws_header, max_size=1000000000
                 )
