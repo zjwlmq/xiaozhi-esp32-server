@@ -1,5 +1,10 @@
 [![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
+> [!TIP]
+> 这是 `zjwlmq` 维护的兼容版本。官方原版、火山新版 API Key 兼容版及
+> CentOS Stream 9 部署版的区别和下载方式，请查看
+> [版本选择说明](./CUSTOM_VERSIONS.md)。
+
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>
 
 <p align="center">

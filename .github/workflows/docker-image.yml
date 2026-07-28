@@ -1,88 +1,106 @@
-name: Docker Image CI
+name: Build Volcengine API Key images
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # 只在以 v 开头的标签推送时触发，例如 v1.0.0
+      - "volc-api-key-v*"
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Build Base Image"]
-    types:
-      - completed
+    inputs:
+      version:
+        description: "Docker image version, for example 1.0.0-dev"
+        required: true
+        default: "dev"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   release:
-    name: Release Docker images
+    name: Build and publish custom images
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
-      contents: write
-      id-token: write
-      issues: write
+
     steps:
-      - name: Check Disk Space
-        run: |
-          df -h
-          docker system df
-
-      - name: Clean up Docker resources
-        run: |
-          docker system prune -af
-          docker builder prune -af
-
-      - name: Checkout code
+      - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Resolve image version
+        shell: bash
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#volc-api-key-v}"
+          else
+            version="${MANUAL_VERSION}"
+          fi
+
+          if [[ ! "${version}" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+            echo "Invalid image version: ${version}" >&2
+            exit 1
+          fi
+
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Run release checks
+        shell: bash
+        run: |
+          python -m unittest discover \
+            -s tests \
+            -p "test_huoshan_double_stream_headers.py"
+          bash -n deploy/install.sh
+          MYSQL_ROOT_PASSWORD=release-check \
+            docker compose -f deploy/centos-stream-9/docker-compose.yml config --quiet
+          MYSQL_ROOT_PASSWORD=release-check \
+            docker compose -f deploy/ubuntu/docker-compose.yml config --quiet
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            network=host
 
-      - name: Login to GitHub Container Registry
+      - name: Sign in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: get_version
-        run: |
-          if [[ "$GITHUB_REF" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
-            echo "IS_VERSION=true" >> $GITHUB_ENV
-          else
-            echo "VERSION=latest" >> $GITHUB_ENV
-            echo "IS_VERSION=false" >> $GITHUB_ENV
-          fi
-
-      # 构建 xiaozhi-server 镜像
-      - name: Build and push xiaozhi-server
+      - name: Build and publish xiaozhi-server
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile-server
           push: true
-          tags: |
-            ${{ env.IS_VERSION == 'true' && format('ghcr.io/{0}:server_{1},ghcr.io/{0}:server_latest', github.repository, env.VERSION) || format('ghcr.io/{0}:server_latest', github.repository) }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_PROGRESS=plain
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:server_volc-api-key-${{ env.VERSION }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=volc-api-key-server
+          cache-to: type=gha,mode=max,scope=volc-api-key-server
 
-      # 构建 manager-api 镜像
-      - name: Build and push manager-web
+      - name: Build and publish manager-web
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile-web
           push: true
-          tags: |
-            ${{ env.IS_VERSION == 'true' && format('ghcr.io/{0}:web_{1},ghcr.io/{0}:web_latest', github.repository, env.VERSION) || format('ghcr.io/{0}:web_latest', github.repository) }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_PROGRESS=plain
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:web_volc-api-key-${{ env.VERSION }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=volc-api-key-web
+          cache-to: type=gha,mode=max,scope=volc-api-key-web
+
+      - name: Print published image names
+        run: |
+          echo "${REGISTRY}/${IMAGE_NAME}:server_volc-api-key-${VERSION}"
+          echo "${REGISTRY}/${IMAGE_NAME}:web_volc-api-key-${VERSION}"
