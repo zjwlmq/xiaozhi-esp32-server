@@ -163,11 +163,11 @@ Anthropic 内容块的 `index` 同时包含思考、正文和工具块，因此�
 不要在运行中的容器里用 `sed` 修改 Python 文件：容器重建后改动就会丢失。应当从包含本补丁的 Git 提交构建并发布镜像。
 
 组合分支的 `.github/workflows/docker-image.yml` 会在发布镜像前执行全部 Python 单元测试。推送
-`volc-anthropic-v1.0.0-rc.1` 标签后，工作流发布：
+`volc-anthropic-v1.0.0-rc.2` 标签后，工作流发布：
 
 ```text
-ghcr.io/<owner>/<repository>:server_volc-anthropic-1.0.0-rc.1
-ghcr.io/<owner>/<repository>:web_volc-anthropic-1.0.0-rc.1
+ghcr.io/<owner>/<repository>:server_volc-anthropic-1.0.0-rc.2
+ghcr.io/<owner>/<repository>:web_volc-anthropic-1.0.0-rc.2
 ```
 
 工作流使用 GitHub 自动提供的 `GITHUB_TOKEN` 发布到当前仓库的 Packages，不需要把个人访问令牌写进仓库。

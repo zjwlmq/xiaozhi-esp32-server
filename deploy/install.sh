@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-anthropic-v1.0.0-rc.1}"
+RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-anthropic-v1.0.0-rc.2}"
 REPOSITORY="${XIAOZHI_REPOSITORY:-zjwlmq/xiaozhi-esp32-server}"
 INSTALL_DIR="${XIAOZHI_INSTALL_DIR:-/opt/xiaozhi-server}"
 BACKUP_ROOT_INPUT="${XIAOZHI_BACKUP_DIR:-}"

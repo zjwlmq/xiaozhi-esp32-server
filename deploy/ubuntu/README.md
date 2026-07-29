@@ -7,7 +7,7 @@ Compose v2 的 Ubuntu 22.04/24.04 服务器。
 
 ```bash
 curl -fL \
-  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-anthropic-v1.0.0-rc.1/deploy/install.sh \
+  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-anthropic-v1.0.0-rc.2/deploy/install.sh \
   -o /tmp/xiaozhi-install.sh
 
 less /tmp/xiaozhi-install.sh

@@ -36,7 +36,7 @@
 - [服务器迁移](./deploy/MIGRATION.md)
 
 固定候选标签：
-[`volc-anthropic-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.1)。
+[`volc-anthropic-v1.0.0-rc.2`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.2)。
 
 本组合版已通过 30 个单元测试及 Python 3.10、YAML、Compose、安装脚本检查。
 API Key 只应在部署后通过智控台填写，不得提交到 GitHub。
