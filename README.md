@@ -46,7 +46,7 @@
 
 ## 固定候选版本
 
-- 组合版：[`volc-anthropic-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.1)
+- 组合版：[`volc-anthropic-v1.0.0-rc.2`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.2)
 - Anthropic 单独版：[`anthropic-messages-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/anthropic-messages-v1.0.0-rc.1)
 - 火山单独版：[`volc-api-key-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-api-key-v1.0.0-rc.1)
 
