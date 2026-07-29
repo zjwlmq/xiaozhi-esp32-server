@@ -20,7 +20,7 @@
 
 - 火山 API Key：`volc-api-key-v1.0.0-rc.1`
 - Anthropic Messages：`anthropic-messages-v1.0.0-rc.1`
-- 组合版：`volc-anthropic-v1.0.0-rc.4`
+- 组合版：`volc-anthropic-v1.0.0-rc.5`
 
 不熟悉 Git 时，可打开标签页面下载 Source code 压缩包；服务器部署建议直接使用
 组合版安装脚本。
@@ -59,6 +59,7 @@ git clone --branch release/volc-anthropic --single-branch \
 - 过滤 `thinking_delta`、`signature_delta` 与 `ping`，并在工具续轮时按协议保存和回传思考签名。
 - 为工具调用建立独立、连续的工具序号，不直接使用 Anthropic 内容块序号。
 - 默认关闭并行工具调用，遇到不完整工具结果或损坏 JSON 时安全终止该轮。
+- 自动忽略首个用户消息前由小智本地持久化的纯文本 assistant 欢迎语；带工具调用的前导 assistant 消息仍会被拒绝。
 
 详细字段和部署方式见 [Anthropic Messages 使用说明](./docs/anthropic-messages.md)。
 
@@ -66,8 +67,8 @@ git clone --branch release/volc-anthropic --single-branch \
 
 组合版提供以下固定镜像：
 
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.4`
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.4`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.5`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.5`
 
 部署入口：
 

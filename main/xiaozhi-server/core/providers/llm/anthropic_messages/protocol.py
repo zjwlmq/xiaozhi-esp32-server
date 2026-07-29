@@ -286,6 +286,18 @@ def convert_dialogue(
                 blocks.append({"type": "text", "text": text})
 
             tool_blocks = _tool_calls_from_message(message)
+            # xiaozhi can play a local wake-up greeting and persist it as an
+            # assistant message before the user has spoken.  It is not a model
+            # turn and Anthropic conversations must start with a user message,
+            # so omit only this leading text-only preamble.  A leading
+            # assistant tool turn remains an error because dropping it would
+            # orphan tool results and could break a signed thinking chain.
+            if (
+                not messages
+                and not message.get("tool_calls")
+                and not tool_blocks
+            ):
+                continue
             tool_ids = tuple(block["id"] for block in tool_blocks if block.get("id"))
             matching_cached_turn = cached_by_tool_ids.get(frozenset(tool_ids))
             if matching_cached_turn is not None and tool_ids:

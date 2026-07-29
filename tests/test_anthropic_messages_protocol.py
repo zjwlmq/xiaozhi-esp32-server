@@ -122,6 +122,80 @@ class ProtocolConversionTests(unittest.TestCase):
             },
         )
 
+    def test_leading_xiaozhi_assistant_welcome_is_ignored(self):
+        converted = convert_dialogue(
+            [
+                {"role": "system", "content": "你是助手"},
+                {"role": "assistant", "content": "我在这里哦！"},
+                {"role": "assistant", "content": "有什么可以帮你？"},
+                {"role": "user", "content": "你好"},
+                {"role": "assistant", "content": "你好呀"},
+                {"role": "user", "content": "今天星期几？"},
+            ]
+        )
+
+        self.assertEqual(converted.system, "你是助手")
+        self.assertEqual(
+            [message["role"] for message in converted.messages],
+            ["user", "assistant", "user"],
+        )
+        self.assertEqual(
+            converted.messages[0]["content"],
+            [{"type": "text", "text": "你好"}],
+        )
+        self.assertEqual(
+            converted.messages[1]["content"],
+            [{"type": "text", "text": "你好呀"}],
+        )
+        all_text = "".join(
+            str(block.get("text") or "")
+            for message in converted.messages
+            for block in message["content"]
+        )
+        self.assertNotIn("我在这里哦", all_text)
+        self.assertNotIn("有什么可以帮你", all_text)
+
+    def test_leading_assistant_tool_turn_is_not_silently_discarded(self):
+        with self.assertRaisesRegex(ValueError, "must start with a user"):
+            convert_dialogue(
+                [
+                    {
+                        "role": "assistant",
+                        "content": "我先调用工具",
+                        "tool_calls": [
+                            {
+                                "id": "orphan-call",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"city":"广州"}',
+                                },
+                            }
+                        ],
+                    },
+                    {"role": "user", "content": "你好"},
+                ]
+            )
+
+    def test_malformed_leading_assistant_tool_turn_is_not_discarded(self):
+        with self.assertRaisesRegex(ValueError, "must start with a user"):
+            convert_dialogue(
+                [
+                    {
+                        "role": "assistant",
+                        "content": "格式错误的工具调用",
+                        "tool_calls": [
+                            {
+                                "id": "malformed-call",
+                                "type": "function",
+                                "function": {"arguments": "{}"},
+                            }
+                        ],
+                    },
+                    {"role": "user", "content": "你好"},
+                ]
+            )
+
     def test_cached_turn_replaces_contiguous_assistant_text_segment(self):
         cached = CachedAssistantTurn(
             content=[

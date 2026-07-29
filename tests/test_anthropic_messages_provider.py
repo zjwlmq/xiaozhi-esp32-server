@@ -102,6 +102,41 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(captured["body"]["system"], "简短回答")
         self.assertEqual(captured["body"]["max_tokens"], 1024)
 
+    def test_xiaozhi_leading_assistant_welcome_reaches_anthropic_as_user_first(self):
+        fixture = (FIXTURES / "text_stream.sse").read_bytes()
+        captured = {}
+
+        def handler(request):
+            captured["body"] = json.loads(request.content.decode("utf-8"))
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream"},
+                content=fixture,
+            )
+
+        provider = self._provider_with_handler(handler)
+        text = "".join(
+            provider.response(
+                "session-leading-welcome",
+                [
+                    {"role": "system", "content": "简短回答"},
+                    {"role": "assistant", "content": "我在这里哦！"},
+                    {"role": "user", "content": "你好"},
+                ],
+            )
+        )
+
+        self.assertEqual(text, "你好，世界")
+        self.assertEqual(
+            captured["body"]["messages"],
+            [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "你好"}],
+                }
+            ],
+        )
+
     def test_empty_cache_limits_fall_back_to_safe_defaults(self):
         provider = LLMProvider(
             _config(

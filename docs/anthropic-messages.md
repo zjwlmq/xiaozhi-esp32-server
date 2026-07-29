@@ -127,6 +127,12 @@ timeout:
 
 如果需要天气、音乐或设备控制等工具，将意图识别选择为“大模型自主函数调用”。普通聊天可以继续使用“不使用意图识别”。
 
+### 首轮本地欢迎语
+
+小智可能在用户第一次说话前播放欢迎语，并把它保存成 assistant 历史消息。这段内容是本地提示，不是 Anthropic 返回的模型轮次；如果直接发送，服务端会因对话没有从 user 消息开始而拒绝请求。
+
+从 `volc-anthropic-v1.0.0-rc.5` 开始，适配器只忽略首个 user 消息之前、没有工具调用的前导 assistant 文本。它不会伪造 user 消息，也不会删除首个 user 之后的正常 assistant 回复。若前导 assistant 消息包含工具调用，适配器仍会报错，不会静默丢弃可能关联工具结果或思考签名的协议内容。
+
 ## 4. 思考内容为什么不会被朗读
 
 Anthropic 流可能同时返回以下内容：
@@ -163,11 +169,11 @@ Anthropic 内容块的 `index` 同时包含思考、正文和工具块，因此�
 不要在运行中的容器里用 `sed` 修改 Python 文件：容器重建后改动就会丢失。应当从包含本补丁的 Git 提交构建并发布镜像。
 
 组合分支的 `.github/workflows/docker-image.yml` 会在发布镜像前执行全部 Python 单元测试。推送
-`volc-anthropic-v1.0.0-rc.4` 标签后，工作流发布：
+`volc-anthropic-v1.0.0-rc.5` 标签后，工作流发布：
 
 ```text
-ghcr.io/<owner>/<repository>:server_volc-anthropic-1.0.0-rc.4
-ghcr.io/<owner>/<repository>:web_volc-anthropic-1.0.0-rc.4
+ghcr.io/<owner>/<repository>:server_volc-anthropic-1.0.0-rc.5
+ghcr.io/<owner>/<repository>:web_volc-anthropic-1.0.0-rc.5
 ```
 
 工作流使用 GitHub 自动提供的 `GITHUB_TOKEN` 发布到当前仓库的 Packages，不需要把个人访问令牌写进仓库。

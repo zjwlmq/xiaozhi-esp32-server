@@ -19,6 +19,7 @@
 - 严格 UTF-8 SSE 解析，只把 `text_delta` 发送给字幕和 TTS。
 - 隐藏思考内容，安全保存并回传思考签名。
 - 独立连续的工具序号，拒绝损坏或不完整的工具参数与结果。
+- 兼容首个用户消息前由小智本地生成的纯文本欢迎语，不会把它误发成 Anthropic 的首轮 assistant 消息。
 - 智控台可新增并选择 `anthropic_messages` 类型模型。
 
 ### 部署
@@ -31,14 +32,15 @@
 
 - [版本选择说明](./CUSTOM_VERSIONS.md)
 - [Anthropic Messages 配置说明](./docs/anthropic-messages.md)
+- [v1.0.0-rc.5 发布说明](./docs/releases/volc-anthropic-v1.0.0-rc.5.md)
 - [CentOS Stream 9 部署](./deploy/centos-stream-9/README.md)
 - [Ubuntu 部署](./deploy/ubuntu/README.md)
 - [服务器迁移](./deploy/MIGRATION.md)
 
 固定候选标签：
-[`volc-anthropic-v1.0.0-rc.4`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.4)。
+[`volc-anthropic-v1.0.0-rc.5`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.5)。
 
-本组合版已通过 30 个单元测试及 Python 3.10、YAML、Compose、安装脚本检查。
+本组合版已通过 34 个单元测试及 Python 3.10、YAML、Compose、安装脚本检查。
 API Key 只应在部署后通过智控台填写，不得提交到 GitHub。
 
 本仓库沿用上游项目的 [MIT License](./LICENSE)。
