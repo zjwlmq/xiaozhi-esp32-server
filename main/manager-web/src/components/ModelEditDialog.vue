@@ -81,6 +81,12 @@
                   "></el-input>
             </template>
 
+            <el-select v-else-if="field.options.length" v-model="form.configJson[field.prop]"
+              :placeholder="field.placeholder" style="width: 100%;">
+              <el-option v-for="option in field.options" :key="option.value" :label="option.label"
+                :value="option.value" />
+            </el-select>
+
             <el-input v-else v-model="form.configJson[field.prop]" :placeholder="field.placeholder" :type="field.type"
               :show-password="field.type === 'password'" @focus="
                 isSensitiveField(field.prop)
@@ -313,8 +319,12 @@ export default {
                 ? "json-textarea"
                 : f.type === "password"
                   ? "password"
-                  : "text",
-            placeholder: `请输入${f.key}`,
+                  : f.type === "number"
+                    ? "number"
+                    : "text",
+            placeholder: f.placeholder || `请输入${f.key}`,
+            defaultValue: Object.prototype.hasOwnProperty.call(f, "default") ? f.default : "",
+            options: Array.isArray(f.options) ? f.options : [],
           }));
 
           if (this.pendingModelData && this.pendingProviderType === providerCode) {
@@ -329,7 +339,7 @@ export default {
       let configJson = model.configJson || {};
       this.dynamicCallInfoFields.forEach((field) => {
         if (!configJson.hasOwnProperty(field.prop)) {
-          configJson[field.prop] = "";
+          configJson[field.prop] = field.defaultValue;
         } else if (field.type === "json-textarea") {
           this.$set(
             this.fieldJsonMap,

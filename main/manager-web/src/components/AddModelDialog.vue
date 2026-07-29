@@ -76,9 +76,13 @@
       <el-form :model="formData.configJson" label-width="auto" label-position="left" class="custom-form">
         <div v-for="(row, rowIndex) in chunkedCallInfoFields" :key="rowIndex" class="form-row">
           <el-form-item v-for="field in row" :key="field.prop" :label="field.label" :prop="field.prop" style="flex: 1;">
-            <el-input v-model="formData.configJson[field.prop]" :placeholder="field.placeholder"
-              :type="field.type || 'text'" class="custom-input-bg" :show-password="field.type === 'password'">
-            </el-input>
+            <el-select v-if="field.options.length" v-model="formData.configJson[field.prop]"
+              :placeholder="field.placeholder" class="custom-select custom-input-bg" style="width: 100%;">
+              <el-option v-for="option in field.options" :key="option.value" :label="option.label"
+                :value="option.value" />
+            </el-select>
+            <el-input v-else v-model="formData.configJson[field.prop]" :placeholder="field.placeholder"
+              :type="field.type || 'text'" class="custom-input-bg" :show-password="field.type === 'password'" />
           </el-form-item>
         </div>
       </el-form>
@@ -160,8 +164,10 @@ export default {
           fields: JSON.parse(item.fields || '[]').map(f => ({
             label: f.label,
             prop: f.key,
-            type: f.type === 'password' ? 'password' : 'text',
-            placeholder: `请输入${f.key}`
+            type: f.type === 'password' ? 'password' : (f.type === 'number' ? 'number' : 'text'),
+            placeholder: f.placeholder || `请输入${f.key}`,
+            defaultValue: Object.prototype.hasOwnProperty.call(f, 'default') ? f.default : '',
+            options: Array.isArray(f.options) ? f.options : []
           }))
         }))
         this.providersLoaded = true
@@ -170,7 +176,7 @@ export default {
     initConfigJson() {
       const defaultConfig = {};
       this.providerFields.forEach(field => {
-        defaultConfig[field.prop] = '';
+        defaultConfig[field.prop] = field.defaultValue;
       });
       this.formData.configJson = { ...defaultConfig };
     },
@@ -183,7 +189,9 @@ export default {
     initDynamicConfig() {
       const newConfig = {};
       this.providerFields.forEach(field => {
-        newConfig[field.prop] = this.formData.configJson[field.prop] || '';
+        newConfig[field.prop] = Object.prototype.hasOwnProperty.call(this.formData.configJson, field.prop)
+          ? this.formData.configJson[field.prop]
+          : field.defaultValue;
       });
       this.formData.configJson = newConfig;
     },

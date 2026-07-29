@@ -20,7 +20,7 @@
 
 - 火山 API Key：`volc-api-key-v1.0.0-rc.1`
 - Anthropic Messages：`anthropic-messages-v1.0.0-rc.1`
-- 组合版：`volc-anthropic-v1.0.0-rc.3`
+- 组合版：`volc-anthropic-v1.0.0-rc.4`
 
 不熟悉 Git 时，可打开标签页面下载 Source code 压缩包；服务器部署建议直接使用
 组合版安装脚本。
@@ -66,8 +66,8 @@ git clone --branch release/volc-anthropic --single-branch \
 
 组合版提供以下固定镜像：
 
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.3`
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.3`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.4`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.4`
 
 部署入口：
 
@@ -83,4 +83,4 @@ API Key、应用 ID 和访问令牌均应在部署后通过智控台填写，不
 1. `main` 用于同步官方仓库。
 2. 单项补丁分别在 `feat/volcengine-tts-api-key` 与 `feat/anthropic-messages` 维护。
 3. `release/volc-anthropic` 合并两项补丁并维护 CentOS/Ubuntu 部署文件。
-4. 固定候选版本使用对应的 `*-v1.0.0-rc.1` 标签发布，避免分支继续更新后无法复现。
+4. 固定候选版本使用对应的版本标签发布，避免分支继续更新后无法复现。
