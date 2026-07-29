@@ -1,9 +1,13 @@
-[![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
+> [!IMPORTANT]
+> ### 当前分支：火山 API Key + Anthropic Messages 组合版（推荐）
+> 同时包含湾湾小何/小何 2.0 的火山双向 TTS 新认证，以及原生 Anthropic
+> `/v1/messages`、隐藏思考块、签名回传和工具调用适配。
+>
+> - [版本选择说明](./CUSTOM_VERSIONS.md)
+> - [Anthropic Messages 配置说明](./docs/anthropic-messages.md)
+> - 固定候选标签：[`volc-anthropic-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.1)
 
-> [!TIP]
-> 这是 `zjwlmq` 维护的兼容版本。官方原版、火山新版 API Key 兼容版及
-> CentOS Stream 9 部署版的区别和下载方式，请查看
-> [版本选择说明](./CUSTOM_VERSIONS.md)。
+[![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>
 
