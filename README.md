@@ -1,9 +1,13 @@
-[![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
+> [!IMPORTANT]
+> ### 当前分支：火山双向 TTS API Key 兼容版
+> 支持新版 `X-Api-Key`，并保留旧版 AppID/Access Token 回退。本分支不包含
+> Anthropic Messages 补丁；两项功能都需要时，请使用
+> [组合版](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/release/volc-anthropic)。
+>
+> - [版本选择说明](./CUSTOM_VERSIONS.md)
+> - 固定候选标签：[`volc-api-key-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-api-key-v1.0.0-rc.1)
 
-> [!TIP]
-> 这是 `zjwlmq` 维护的兼容版本。官方原版、火山新版 API Key 兼容版及
-> CentOS Stream 9 部署版的区别和下载方式，请查看
-> [版本选择说明](./CUSTOM_VERSIONS.md)。
+[![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>
 
