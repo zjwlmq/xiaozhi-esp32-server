@@ -1507,9 +1507,13 @@ export default {
 
       this.modelOptions["Intent"].forEach((item) => {
         if (item.value === "Intent_function_call") {
-          // 如果llmType是openai或ollama，允许选择function_call
+          // 原生支持函数调用的LLM允许选择function_call
           // 否则隐藏function_call选项
-          if (llmType === "openai" || llmType === "ollama") {
+          if (
+            llmType === "openai" ||
+            llmType === "ollama" ||
+            llmType === "anthropic_messages"
+          ) {
             item.isHidden = false;
           } else {
             item.isHidden = true;
@@ -1524,7 +1528,8 @@ export default {
       if (
         this.form.model.intentModelId === "Intent_function_call" &&
         llmType !== "openai" &&
-        llmType !== "ollama"
+        llmType !== "ollama" &&
+        llmType !== "anthropic_messages"
       ) {
         // 找到第一个可见的选项
         const firstVisibleOption = this.modelOptions["Intent"].find(

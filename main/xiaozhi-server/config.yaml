@@ -612,7 +612,29 @@ VAD:
 
 LLM:
   # 所有openai类型均可以修改超参，以AliLLM为例
-  # 当前支持的type为openai、dify、ollama，可自行适配
+  # 常用type包括openai、anthropic_messages、dify、ollama，其他适配器见core/providers/llm
+  AnthropicMessagesLLM:
+    # Anthropic Messages原生协议，详细说明见docs/anthropic-messages.md
+    type: anthropic_messages
+    # 支持填写服务根地址、/v1地址或完整/v1/messages地址
+    base_url: https://relay.example.com
+    model_name: 你的Anthropic协议模型名称
+    api_key: 你的Anthropic协议API密钥
+    # 官方Anthropic及多数原生协议中转站使用x-api-key；部分中转站使用bearer
+    auth_type: x-api-key
+    anthropic_version: "2023-06-01"
+    # 仅当中转站按User-Agent拦截请求时才需要改成它允许的值
+    user_agent: "curl/8.5.0"
+    # max_tokens包含模型隐藏思考所消耗的token，思考模型建议至少1024
+    max_tokens: 1024
+    temperature: 0.7
+    top_p: 1
+    timeout: 300
+    # 默认禁止同一响应并行调用多个工具，保证每个tool_use都有完整tool_result
+    disable_parallel_tool_use: true
+    # 工具调用期间隐藏思考块的会话缓存；最终回答完成后会自动清理
+    thinking_cache_ttl: 900
+    thinking_cache_max_sessions: 256
   AliLLM:
     # 定义LLM API类型
     type: openai

@@ -1,6 +1,6 @@
 # CentOS Stream 9 部署
 
-该部署入口运行“火山 API Key 兼容版”，适用于 CentOS Stream 9 的
+该部署入口运行“火山 API Key + Anthropic Messages 组合版”，适用于 CentOS Stream 9 的
 `x86_64` 和 `aarch64` 服务器。
 
 ## 特点
@@ -19,7 +19,7 @@
 
 ```bash
 curl -fL \
-  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-api-key-v1.0.0-rc.1/deploy/install.sh \
+  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-anthropic-v1.0.0-rc.1/deploy/install.sh \
   -o /tmp/xiaozhi-install.sh
 
 less /tmp/xiaozhi-install.sh

@@ -1,13 +1,13 @@
-name: Build Volcengine API Key images
+name: Build Volcengine + Anthropic images
 
 on:
   push:
     tags:
-      - "volc-api-key-v*"
+      - "volc-anthropic-v*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Docker image version, for example 1.0.0-dev"
+        description: "Combined image version, for example 1.0.0-dev"
         required: true
         default: "dev"
 
@@ -16,8 +16,27 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  python-tests:
+    name: Python unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check httpx==0.28.1 loguru==0.7.3
+
+      - name: Run Python unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
   release:
-    name: Build and publish custom images
+    name: Build and publish combined images
+    needs: python-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,7 +52,7 @@ jobs:
           MANUAL_VERSION: ${{ inputs.version }}
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            version="${GITHUB_REF_NAME#volc-api-key-v}"
+            version="${GITHUB_REF_NAME#volc-anthropic-v}"
           else
             version="${MANUAL_VERSION}"
           fi
@@ -48,9 +67,6 @@ jobs:
       - name: Run release checks
         shell: bash
         run: |
-          python -m unittest discover \
-            -s tests \
-            -p "test_huoshan_double_stream_headers.py"
           bash -n deploy/install.sh
           MYSQL_ROOT_PASSWORD=release-check \
             docker compose -f deploy/centos-stream-9/docker-compose.yml config --quiet
@@ -78,12 +94,12 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:server_volc-api-key-${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:server_volc-anthropic-${{ env.VERSION }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=volc-api-key-server
-          cache-to: type=gha,mode=max,scope=volc-api-key-server
+          cache-from: type=gha,scope=volc-anthropic-server
+          cache-to: type=gha,mode=max,scope=volc-anthropic-server
 
       - name: Build and publish manager-web
         uses: docker/build-push-action@v6
@@ -93,14 +109,14 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:web_volc-api-key-${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:web_volc-anthropic-${{ env.VERSION }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=volc-api-key-web
-          cache-to: type=gha,mode=max,scope=volc-api-key-web
+          cache-from: type=gha,scope=volc-anthropic-web
+          cache-to: type=gha,mode=max,scope=volc-anthropic-web
 
       - name: Print published image names
         run: |
-          echo "${REGISTRY}/${IMAGE_NAME}:server_volc-api-key-${VERSION}"
-          echo "${REGISTRY}/${IMAGE_NAME}:web_volc-api-key-${VERSION}"
+          echo "${REGISTRY}/${IMAGE_NAME}:server_volc-anthropic-${VERSION}"
+          echo "${REGISTRY}/${IMAGE_NAME}:web_volc-anthropic-${VERSION}"

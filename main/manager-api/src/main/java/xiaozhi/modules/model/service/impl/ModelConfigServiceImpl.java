@@ -325,7 +325,9 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
             JSONObject configJson = modelConfigEntity.getConfigJson();
             if (configJson != null && configJson.containsKey("type")) {
                 String type = configJson.get("type").toString();
-                if (!"openai".equals(type) && !"ollama".equals(type)) {
+                if (!"openai".equals(type)
+                        && !"ollama".equals(type)
+                        && !"anthropic_messages".equals(type)) {
                     throw new RenException(ErrorCode.INVALID_LLM_TYPE);
                 }
             }

@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-api-key-v1.0.0-rc.1}"
+RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-anthropic-v1.0.0-rc.1}"
 REPOSITORY="${XIAOZHI_REPOSITORY:-zjwlmq/xiaozhi-esp32-server}"
 INSTALL_DIR="${XIAOZHI_INSTALL_DIR:-/opt/xiaozhi-server}"
 BACKUP_ROOT_INPUT="${XIAOZHI_BACKUP_DIR:-}"
-IMAGE_VERSION="${XIAOZHI_IMAGE_VERSION:-${RELEASE_TAG#volc-api-key-v}}"
+IMAGE_VERSION="${XIAOZHI_IMAGE_VERSION:-${RELEASE_TAG#volc-anthropic-v}}"
 INSTALL_DOCKER="${INSTALL_DOCKER:-0}"
 OPEN_FIREWALL="${OPEN_FIREWALL:-0}"
 SKIP_DATABASE_BACKUP="${SKIP_DATABASE_BACKUP:-0}"
 STARTUP_TIMEOUT="${XIAOZHI_STARTUP_TIMEOUT:-300}"
 RAW_BASE="https://raw.githubusercontent.com/${REPOSITORY}/${RELEASE_TAG}"
 MODEL_URL="https://modelscope.cn/models/iic/SenseVoiceSmall/resolve/master/model.pt"
-SERVER_IMAGE="ghcr.io/${REPOSITORY}:server_volc-api-key-${IMAGE_VERSION}"
-WEB_IMAGE="ghcr.io/${REPOSITORY}:web_volc-api-key-${IMAGE_VERSION}"
+SERVER_IMAGE="ghcr.io/${REPOSITORY}:server_volc-anthropic-${IMAGE_VERSION}"
+WEB_IMAGE="ghcr.io/${REPOSITORY}:web_volc-anthropic-${IMAGE_VERSION}"
 
 log() {
     printf '[xiaozhi] %s\n' "$*"
@@ -654,7 +654,8 @@ print_next_steps() {
 5. 编辑 ${INSTALL_DIR}/data/.config.yaml，填写该 secret。
 6. 如需公网访问智控台，将 ${INSTALL_DIR}/.env 中
    MANAGER_BIND_ADDRESS 改为 0.0.0.0，并限制云安全组来源 IP。
-7. 在智控台模型配置中填写火山 API Key，不要把密钥提交到 GitHub。
+7. 在智控台模型配置中填写火山 API Key；如需使用 Anthropic Messages，再新增
+   Anthropic 协议模型并填写中转站地址、模型名和密钥。任何密钥都不要提交到 GitHub。
 8. 重启服务：
    cd ${INSTALL_DIR}
    docker compose --env-file .env -f docker-compose.yml up -d
