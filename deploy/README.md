@@ -10,8 +10,8 @@
 
 两个 Compose 文件固定使用本仓库发布的 `1.0.0-rc.1` 候选镜像：
 
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.2`
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.2`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.3`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.3`
 
 安装脚本位于 [`install.sh`](./install.sh)。脚本不会删除已有的 MySQL、配置文件或
 上传文件；检测到已有数据时会保留并备份部署配置。

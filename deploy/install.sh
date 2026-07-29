@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-anthropic-v1.0.0-rc.2}"
+RELEASE_TAG="${XIAOZHI_RELEASE_TAG:-volc-anthropic-v1.0.0-rc.3}"
 REPOSITORY="${XIAOZHI_REPOSITORY:-zjwlmq/xiaozhi-esp32-server}"
 INSTALL_DIR="${XIAOZHI_INSTALL_DIR:-/opt/xiaozhi-server}"
 BACKUP_ROOT_INPUT="${XIAOZHI_BACKUP_DIR:-}"
@@ -400,7 +400,7 @@ backup_running_database() {
     local backup_file
     local partial_file
 
-    [[ "${MYSQL_DATA_EXISTS}" == "1" ]] || return
+    [[ "${MYSQL_DATA_EXISTS}" == "1" ]] || return 0
 
     running_container="$(
         docker ps \
@@ -517,9 +517,9 @@ prepare_model() {
 configure_firewall() {
     local port
 
-    [[ "${PROFILE}" == "centos-stream-9" ]] || return
-    command -v firewall-cmd >/dev/null 2>&1 || return
-    firewall-cmd --state >/dev/null 2>&1 || return
+    [[ "${PROFILE}" == "centos-stream-9" ]] || return 0
+    command -v firewall-cmd >/dev/null 2>&1 || return 0
+    firewall-cmd --state >/dev/null 2>&1 || return 0
 
     if [[ "${OPEN_FIREWALL}" == "1" ]]; then
         for port in 8000 8002 8003; do
