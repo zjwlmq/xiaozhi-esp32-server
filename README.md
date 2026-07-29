@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> ### 当前分支：Anthropic Messages 原生协议兼容版
+> 支持 `/v1/messages`、UTF-8 SSE、思考签名回传和安全工具调用；本分支不包含
+> 火山 TTS API Key 补丁。两项功能都需要时，请使用
+> [组合版](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/release/volc-anthropic)。
+>
+> - [Anthropic Messages 配置说明](./docs/anthropic-messages.md)
+> - 固定候选标签：[`anthropic-messages-v1.0.0-rc.1`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/anthropic-messages-v1.0.0-rc.1)
+
 [![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>
