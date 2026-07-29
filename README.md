@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> ### `zjwlmq` 兼容版本入口
+> 当前 `main` 分支保留官方业务代码，只在这里提供版本导航：
+>
+> - **推荐组合版**：[火山 API Key + Anthropic Messages](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/release/volc-anthropic)
+> - **仅 Anthropic 协议**：[feat/anthropic-messages](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/feat/anthropic-messages)
+> - **仅火山 API Key**：[feat/volcengine-tts-api-key](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/feat/volcengine-tts-api-key)
+> - [查看完整版本选择与部署说明](https://github.com/zjwlmq/xiaozhi-esp32-server/blob/release/volc-anthropic/CUSTOM_VERSIONS.md)
+
 [![Banners](docs/images/banner1.png)](https://github.com/xinnan-tech/xiaozhi-esp32-server)
 
 <h1 align="center">小智后端服务xiaozhi-esp32-server</h1>
