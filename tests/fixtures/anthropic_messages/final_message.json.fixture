@@ -1,0 +1,17 @@
+{
+  "id": "msg-final",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "最终回答前的隐藏思考",
+      "signature": "final-signature"
+    },
+    {
+      "type": "text",
+      "text": "广州今天晴朗。"
+    }
+  ],
+  "stop_reason": "end_turn"
+}

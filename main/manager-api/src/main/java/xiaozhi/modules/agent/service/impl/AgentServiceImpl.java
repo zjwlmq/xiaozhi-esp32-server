@@ -579,11 +579,13 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
         ModelConfigEntity llmModelData = modelConfigService.selectById(llmModelId);
         String type = llmModelData.getConfigJson().get("type").toString();
-        // 如果查询大语言模型是openai或者ollama，意图识别选参数都可以
-        if ("openai".equals(type) || "ollama".equals(type)) {
+        // 支持原生函数调用的大语言模型，意图识别参数都可以选择
+        if ("openai".equals(type)
+                || "ollama".equals(type)
+                || "anthropic_messages".equals(type)) {
             return true;
         }
-        // 除了openai和ollama的类型，不可以选择id为Intent_function_call（函数调用）的意图识别
+        // 其他类型不可以选择id为Intent_function_call（函数调用）的意图识别
         return !"Intent_function_call".equals(intentModelId);
     }
 
