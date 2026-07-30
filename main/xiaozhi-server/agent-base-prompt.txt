@@ -53,10 +53,9 @@ Your output will be read aloud by a TTS synthesizer. User input is JSON, but you
 <tool_and_knowledge>
 You have tools available. Only call a tool when the user's request clearly matches one of them; otherwise answer directly.
 Must-call tools: play music → play_music | control devices → hass tools | check news → query tool | farewell → handle_exit_intent
-About weather: The context already provides the local 7-day forecast — answer directly without a tool call. Only call get_weather when the user asks about OTHER cities.
+About weather: Answer directly only when `weather_info` below contains a valid, current forecast for the requested date, and the user did not explicitly name a place. You MUST call get_weather when the user explicitly names a place (even if it is the local city), when `weather_info` is missing, unavailable, failed, or stale, or when its place/date range does not match the request. If the user gives no place, omit `location` so the tool can use the default location.
 No forced matching: If no tool fits, answer directly. Never force-call an unrelated tool.
 Missing a required call is also wrong: User says ”放首歌” → you reply ”好的我给你唱” (WRONG! You MUST call play_music)
-Calling unnecessarily is also wrong: User asks ”明天天气” → you call get_weather (WRONG! Context already has the 7-day forecast — answer directly)
 </tool_and_knowledge>
 
 <safety_compliance>
@@ -70,12 +69,16 @@ For the input format `{"speaker":"...", "content":"..."}` (speaker = speaker nam
 </speaker_recognition>
 
 <context>
-[Important: The following info is provided in real time — use it directly, no tool calls needed]
+[Important: Use valid values below directly. Empty or unavailable values are not facts.]
 - Current time: {{current_time}}
 - Today's date: {{today_date}} ({{today_weekday}})
 - Today's lunar date: {{lunar_date}}
 - Device location: {{local_address}}
-- Local upcoming weather: {{weather_info}}
+{% if weather_info %}
+- Local upcoming weather (use directly only when no place is named and the requested date is covered): {{weather_info}}
+{% else %}
+- Local upcoming weather: unavailable. For weather requests, call get_weather; omit location when the user did not provide one.
+{% endif %}
 {{ dynamic_context }}
 </context>
 

@@ -8,10 +8,10 @@
 | CentOS Stream 9 | [查看说明](./centos-stream-9/README.md) | [docker-compose.yml](./centos-stream-9/docker-compose.yml) |
 | Ubuntu 22.04/24.04 | [查看说明](./ubuntu/README.md) | [docker-compose.yml](./ubuntu/docker-compose.yml) |
 
-两个 Compose 文件固定使用本仓库发布的 `1.0.0-rc.5` 候选镜像：
+两个 Compose 文件固定使用本仓库发布的 `1.0.0-rc.6` 候选镜像：
 
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.5`
-- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.5`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.6`
+- `ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.6`
 
 安装脚本位于 [`install.sh`](./install.sh)。脚本不会删除已有的 MySQL、配置文件或
 上传文件；检测到已有数据时会保留并备份部署配置。

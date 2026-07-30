@@ -1,6 +1,6 @@
 services:
   xiaozhi-esp32-server:
-    image: ${XIAOZHI_SERVER_IMAGE:-ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.5}
+    image: ${XIAOZHI_SERVER_IMAGE:-ghcr.io/zjwlmq/xiaozhi-esp32-server:server_volc-anthropic-1.0.0-rc.6}
     container_name: xiaozhi-esp32-server
     depends_on:
       xiaozhi-esp32-server-db:
@@ -22,7 +22,7 @@ services:
       - ./models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt:ro
 
   xiaozhi-esp32-server-web:
-    image: ${XIAOZHI_WEB_IMAGE:-ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.5}
+    image: ${XIAOZHI_WEB_IMAGE:-ghcr.io/zjwlmq/xiaozhi-esp32-server:web_volc-anthropic-1.0.0-rc.6}
     container_name: xiaozhi-esp32-server-web
     restart: unless-stopped
     networks:

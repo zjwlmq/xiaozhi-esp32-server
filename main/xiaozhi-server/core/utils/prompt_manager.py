@@ -49,6 +49,27 @@ EMOJI_List = [
     "🙄",
 ]
 
+WEATHER_FAILURE_MARKERS = (
+    "天气信息获取失败",
+    "获取天气信息失败",
+    "获取天气失败",
+    "请求失败",
+    "未找到相关的城市",
+)
+
+
+def _normalize_weather_info(weather_info: Any) -> str:
+    """只保留可作为提示词事实使用的天气文本。"""
+    if not isinstance(weather_info, str):
+        return ""
+
+    normalized = weather_info.strip()
+    if not normalized:
+        return ""
+    if any(marker in normalized for marker in WEATHER_FAILURE_MARKERS):
+        return ""
+    return normalized
+
 
 class PromptManager:
     """系统提示词管理器，负责管理和更新系统提示词"""
@@ -167,9 +188,14 @@ class PromptManager:
         """获取天气信息"""
         try:
             # 先从缓存获取
-            cached_weather = self.cache_manager.get(self.CacheType.WEATHER, location)
-            if cached_weather is not None:
+            raw_cached_weather = self.cache_manager.get(
+                self.CacheType.WEATHER, location
+            )
+            cached_weather = _normalize_weather_info(raw_cached_weather)
+            if cached_weather:
                 return cached_weather
+            if raw_cached_weather is not None:
+                self.cache_manager.delete(self.CacheType.WEATHER, location)
 
             # 缓存未命中，调用 async get_weather 函数
             # Windows ProactorEventLoop 不支持 run_coroutine_threadsafe().result()
@@ -199,14 +225,18 @@ class PromptManager:
                 raise exception_holder[0]
             result = result_holder[0]
             if isinstance(result, ActionResponse):
-                weather_report = result.result
-                self.cache_manager.set(self.CacheType.WEATHER, location, weather_report)
-                return weather_report
-            return "天气信息获取失败"
+                weather_report = _normalize_weather_info(result.result)
+                if weather_report:
+                    self.cache_manager.set(
+                        self.CacheType.WEATHER, location, weather_report
+                    )
+                    return weather_report
+                self.logger.bind(tag=TAG).warning("天气工具未返回有效天气信息")
+            return ""
 
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"获取天气信息失败: {e}")
-            return "天气信息获取失败"
+            return ""
 
     def update_context_info(self, conn, client_ip: str):
         """同步更新上下文信息"""
@@ -269,10 +299,14 @@ class PromptManager:
 
                 # 获取天气信息（从全局缓存）
                 if local_address:
-                    weather_info = (
-                        self.cache_manager.get(self.CacheType.WEATHER, local_address)
-                        or ""
+                    raw_weather_info = self.cache_manager.get(
+                        self.CacheType.WEATHER, local_address
                     )
+                    weather_info = _normalize_weather_info(raw_weather_info)
+                    if raw_weather_info is not None and not weather_info:
+                        self.cache_manager.delete(
+                            self.CacheType.WEATHER, local_address
+                        )
 
             # 获取TTS选择的语言，默认值为中文
             language = (
