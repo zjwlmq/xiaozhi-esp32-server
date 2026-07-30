@@ -19,7 +19,7 @@
 
 ```bash
 curl -fL \
-  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-anthropic-v1.0.0-rc.6/deploy/install.sh \
+  https://raw.githubusercontent.com/zjwlmq/xiaozhi-esp32-server/volc-anthropic-v1.0.0-rc.7/deploy/install.sh \
   -o /tmp/xiaozhi-install.sh
 
 less /tmp/xiaozhi-install.sh

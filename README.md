@@ -32,13 +32,13 @@
 
 - [版本选择说明](./CUSTOM_VERSIONS.md)
 - [Anthropic Messages 配置说明](./docs/anthropic-messages.md)
-- [v1.0.0-rc.6 发布说明](./docs/releases/volc-anthropic-v1.0.0-rc.6.md)
+- [v1.0.0-rc.7 发布说明](./docs/releases/volc-anthropic-v1.0.0-rc.7.md)
 - [CentOS Stream 9 部署](./deploy/centos-stream-9/README.md)
 - [Ubuntu 部署](./deploy/ubuntu/README.md)
 - [服务器迁移](./deploy/MIGRATION.md)
 
 固定候选标签：
-[`volc-anthropic-v1.0.0-rc.6`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.6)。
+[`volc-anthropic-v1.0.0-rc.7`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.7)。
 
 本组合版已通过 40 个单元测试及 Python 3.10、YAML、Compose、安装脚本检查。
 API Key 只应在部署后通过智控台填写，不得提交到 GitHub。
