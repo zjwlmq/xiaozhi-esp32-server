@@ -99,7 +99,74 @@
         </div>
       </template>
     </el-form>
+
+    <div v-if="supportsUpstreamProbe" class="upstream-tools">
+      <div>
+        <div class="upstream-tools__title">{{ $t("modelConfigDialog.upstreamTools") }}</div>
+        <div class="upstream-tools__hint">{{ $t("modelConfigDialog.upstreamToolsHint") }}</div>
+      </div>
+      <div class="upstream-tools__actions">
+        <el-button :loading="modelsLoading" icon="el-icon-refresh" @click="fetchUpstreamModels(true)">
+          {{ $t("modelConfigDialog.fetchUpstreamModels") }}
+        </el-button>
+        <el-button type="primary" :loading="testLoading" icon="el-icon-video-play" @click="openAndTest">
+          {{ $t("modelConfigDialog.testConnection") }}
+        </el-button>
+      </div>
     </div>
+    </div>
+
+    <el-dialog
+      :title="$t('modelConfigDialog.upstreamTestTitle')"
+      :visible.sync="probeDialogVisible"
+      width="620px"
+      append-to-body
+      :close-on-click-modal="false"
+      custom-class="upstream-probe-dialog"
+    >
+      <div class="probe-model-row">
+        <span class="probe-label">{{ $t("modelConfigDialog.testModel") }}</span>
+        <el-select
+          v-model="probeModel"
+          filterable
+          allow-create
+          default-first-option
+          style="flex: 1"
+          :placeholder="$t('modelConfigDialog.selectOrEnterModel')"
+          @change="applyProbeModel"
+        >
+          <el-option v-for="item in upstreamModels" :key="item.id" :label="item.name || item.id" :value="item.id" />
+        </el-select>
+        <el-button :loading="modelsLoading" icon="el-icon-refresh" @click="fetchUpstreamModels(false)">
+          {{ $t("modelConfigDialog.refresh") }}
+        </el-button>
+      </div>
+
+      <el-input
+        v-model="probePrompt"
+        class="probe-prompt"
+        :placeholder="$t('modelConfigDialog.testPrompt')"
+        maxlength="2000"
+        show-word-limit
+      />
+
+      <div v-if="probeState" class="probe-result" :class="`probe-result--${probeState}`">
+        <div class="probe-result__header">
+          <span v-if="probeState === 'success'"><i class="el-icon-success"></i> {{ $t("modelConfigDialog.testSuccess") }}</span>
+          <span v-else-if="probeState === 'error'"><i class="el-icon-error"></i> {{ $t("modelConfigDialog.testFailed") }}</span>
+          <span v-else><i class="el-icon-info"></i> {{ $t("modelConfigDialog.modelsLoaded") }}</span>
+          <span v-if="probeMeta" class="probe-result__meta">{{ probeMeta }}</span>
+        </div>
+        <pre>{{ probeMessage }}</pre>
+      </div>
+
+      <span slot="footer" class="dialog-footer probe-footer">
+        <el-button @click="probeDialogVisible = false">{{ $t("modelConfigDialog.close") }}</el-button>
+        <el-button type="primary" :loading="testLoading" icon="el-icon-refresh" @click="testUpstreamConnection">
+          {{ $t("modelConfigDialog.runTest") }}
+        </el-button>
+      </span>
+    </el-dialog>
   </CustomDialog>
 </template>
 
@@ -140,6 +207,15 @@ export default {
         "secret_key",
       ],
       originalValues: {}, // 存储原始值，用于失焦时恢复
+      probeDialogVisible: false,
+      upstreamModels: [],
+      probeModel: "",
+      probePrompt: "hi",
+      probeState: "",
+      probeMessage: "",
+      probeMeta: "",
+      modelsLoading: false,
+      testLoading: false,
       form: {
         id: "",
         modelType: "",
@@ -168,6 +244,11 @@ export default {
       }
       return result;
     },
+    supportsUpstreamProbe() {
+      const type = String(this.form.configJson.type || "").toLowerCase();
+      return String(this.modelType || "").toLowerCase() === "llm"
+        && ["anthropic_messages", "openai"].includes(type);
+    },
   },
   watch: {
     modelType() {
@@ -195,6 +276,7 @@ export default {
     },
     handleClose() {
       this.saving = false;
+      this.probeDialogVisible = false;
       // 处理关闭弹窗闪动问题
       setTimeout(() => {
         this.resetForm();
@@ -214,6 +296,14 @@ export default {
         configJson: {},
       };
       this.fieldJsonMap = {};
+      this.upstreamModels = [];
+      this.probeModel = "";
+      this.probePrompt = "hi";
+      this.probeState = "";
+      this.probeMessage = "";
+      this.probeMeta = "";
+      this.modelsLoading = false;
+      this.testLoading = false;
     },
     resetProviders() {
       this.providers = [];
@@ -288,6 +378,82 @@ export default {
       setTimeout(() => {
         this.saving = false;
       }, 3000);
+    },
+    syncJsonFields() {
+      Object.keys(this.fieldJsonMap).forEach((key) => {
+        const parsed = this.validateJson(this.fieldJsonMap[key]);
+        if (parsed !== null) {
+          this.form.configJson[key] = parsed;
+        }
+      });
+    },
+    probePayload() {
+      this.syncJsonFields();
+      return {
+        modelId: this.modelData.duplicateMode ? null : (this.form.id || this.modelData.id || null),
+        configJson: { ...this.form.configJson },
+        modelName: this.probeModel || this.form.configJson.model_name || "",
+        prompt: this.probePrompt || "hi",
+      };
+    },
+    applyProbeModel(value) {
+      this.probeModel = value;
+      this.$set(this.form.configJson, "model_name", value);
+    },
+    fetchUpstreamModels(openDialog) {
+      this.probeDialogVisible = openDialog || this.probeDialogVisible;
+      this.modelsLoading = true;
+      this.probeState = "";
+      Api.model.getUpstreamModels(this.probePayload(), ({ data }) => {
+        this.modelsLoading = false;
+        const result = data.data || {};
+        this.upstreamModels = Array.isArray(result.models) ? result.models : [];
+        const current = this.form.configJson.model_name || this.probeModel;
+        this.probeModel = current || (this.upstreamModels[0] && this.upstreamModels[0].id) || "";
+        if (this.probeModel) this.applyProbeModel(this.probeModel);
+        this.probeState = "models";
+        this.probeMessage = this.$t("modelConfigDialog.modelsFound", { count: this.upstreamModels.length });
+        this.probeMeta = `HTTP ${result.upstreamStatus || 200} · ${result.latencyMs || 0} ms`;
+      }, (error) => {
+        this.modelsLoading = false;
+        this.showProbeError(error);
+      });
+    },
+    openAndTest() {
+      this.probeDialogVisible = true;
+      this.probeModel = this.form.configJson.model_name || this.probeModel || "";
+      this.$nextTick(() => this.testUpstreamConnection());
+    },
+    testUpstreamConnection() {
+      this.probeDialogVisible = true;
+      this.probeModel = this.probeModel || this.form.configJson.model_name || "";
+      if (!this.probeModel) {
+        this.probeState = "error";
+        this.probeMessage = this.$t("modelConfigDialog.modelRequired");
+        this.probeMeta = "";
+        return;
+      }
+      this.applyProbeModel(this.probeModel);
+      this.testLoading = true;
+      this.probeState = "";
+      Api.model.testUpstreamModel(this.probePayload(), ({ data }) => {
+        this.testLoading = false;
+        const result = data.data || {};
+        this.probeState = "success";
+        this.probeMessage = result.response || this.$t("modelConfigDialog.emptyResponse");
+        this.probeMeta = `HTTP ${result.upstreamStatus || 200} · ${result.latencyMs || 0} ms`;
+      }, (error) => {
+        this.testLoading = false;
+        this.showProbeError(error);
+      });
+    },
+    showProbeError(error) {
+      const responseData = error && error.data;
+      this.probeState = "error";
+      this.probeMessage = (responseData && responseData.msg)
+        || (error && error.message)
+        || this.$t("modelConfigDialog.unknownTestError");
+      this.probeMeta = responseData && responseData.code ? `Code ${responseData.code}` : "";
     },
     loadProviders() {
       if (this.providersLoaded) return;
@@ -535,6 +701,94 @@ export default {
   }
   ::v-deep .el-form-item {
     margin-bottom: 10px;
+  }
+
+  .upstream-tools {
+    margin-top: 8px;
+    padding: 14px 16px;
+    border: 1px solid #dce6ff;
+    border-radius: 8px;
+    background: #f7f9ff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .upstream-tools__title {
+    color: #303957;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .upstream-tools__hint {
+    color: #7b849f;
+    font-size: 12px;
+  }
+
+  .upstream-tools__actions {
+    display: flex;
+    flex-shrink: 0;
+  }
+}
+
+::v-deep .upstream-probe-dialog {
+  border-radius: 12px;
+
+  .probe-model-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .probe-label {
+    color: #4b536e;
+    font-weight: 600;
+  }
+
+  .probe-prompt {
+    margin-top: 16px;
+  }
+
+  .probe-result {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #101827;
+    color: #d8e3f5;
+
+    &--success .probe-result__header { color: #4ade80; }
+    &--error .probe-result__header { color: #fb7185; }
+    &--models .probe-result__header { color: #60a5fa; }
+
+    pre {
+      margin: 12px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: 13px/1.65 Consolas, Monaco, monospace;
+      max-height: 260px;
+      overflow: auto;
+    }
+  }
+
+  .probe-result__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 600;
+  }
+
+  .probe-result__meta {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: normal;
+  }
+
+  .probe-footer {
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

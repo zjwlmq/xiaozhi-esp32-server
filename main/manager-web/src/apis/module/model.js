@@ -234,6 +234,46 @@ export default {
         })
       }).send()
   },
+  // 从上游服务获取可用模型（密钥由后端代发，不直连上游）
+  getUpstreamModels(payload, callback, onFailure) {
+    RequestService.sendRequest()
+      .url(`${getServiceUrl()}/models/upstream/models`)
+      .method('POST')
+      .data(payload)
+      .success((res) => {
+        RequestService.clearRequestTime();
+        callback(res);
+      })
+      .fail((error) => {
+        RequestService.clearRequestTime();
+        onFailure(error);
+      })
+      .networkFail((error) => {
+        RequestService.clearRequestTime();
+        onFailure(error);
+      })
+      .send();
+  },
+  // 使用当前表单配置向上游发送最小测试消息
+  testUpstreamModel(payload, callback, onFailure) {
+    RequestService.sendRequest()
+      .url(`${getServiceUrl()}/models/upstream/test`)
+      .method('POST')
+      .data(payload)
+      .success((res) => {
+        RequestService.clearRequestTime();
+        callback(res);
+      })
+      .fail((error) => {
+        RequestService.clearRequestTime();
+        onFailure(error);
+      })
+      .networkFail((error) => {
+        RequestService.clearRequestTime();
+        onFailure(error);
+      })
+      .send();
+  },
   // 启用/禁用模型状态
   updateModelStatus(id, status, callback) {
     RequestService.sendRequest()

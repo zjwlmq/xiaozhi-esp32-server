@@ -26,10 +26,14 @@ import xiaozhi.modules.model.dto.ModelBasicInfoDTO;
 import xiaozhi.modules.model.dto.ModelConfigBodyDTO;
 import xiaozhi.modules.model.dto.ModelConfigDTO;
 import xiaozhi.modules.model.dto.ModelProviderDTO;
+import xiaozhi.modules.model.dto.UpstreamModelListDTO;
+import xiaozhi.modules.model.dto.UpstreamModelProbeRequestDTO;
+import xiaozhi.modules.model.dto.UpstreamModelTestDTO;
 import xiaozhi.modules.model.dto.VoiceDTO;
 import xiaozhi.modules.model.entity.ModelConfigEntity;
 import xiaozhi.modules.model.service.ModelConfigService;
 import xiaozhi.modules.model.service.ModelProviderService;
+import xiaozhi.modules.model.service.ModelUpstreamProbeService;
 import xiaozhi.modules.timbre.service.TimbreService;
 
 @AllArgsConstructor
@@ -43,6 +47,21 @@ public class ModelController {
     private final ModelConfigService modelConfigService;
     private final ConfigService configService;
     private final AgentTemplateService agentTemplateService;
+    private final ModelUpstreamProbeService modelUpstreamProbeService;
+
+    @PostMapping("/upstream/models")
+    @Operation(summary = "获取上游模型列表")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<UpstreamModelListDTO> getUpstreamModels(@RequestBody UpstreamModelProbeRequestDTO request) {
+        return new Result<UpstreamModelListDTO>().ok(modelUpstreamProbeService.fetchModels(request));
+    }
+
+    @PostMapping("/upstream/test")
+    @Operation(summary = "测试上游模型连接")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<UpstreamModelTestDTO> testUpstreamModel(@RequestBody UpstreamModelProbeRequestDTO request) {
+        return new Result<UpstreamModelTestDTO>().ok(modelUpstreamProbeService.testConnection(request));
+    }
 
     @GetMapping("/names")
     @Operation(summary = "获取所有模型名称")
