@@ -11,6 +11,11 @@ from typing import Dict, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from core.connection import ConnectionHandler
 from config.logger import setup_logging
+from core.utils.rolepack_loader import (
+    RolePackError,
+    RolePackLoader,
+    rolepack_failure_prompt,
+)
 from jinja2 import Template
 
 TAG = __name__
@@ -91,8 +96,22 @@ class PromptManager:
 
         self.context_provider = ContextDataProvider(config, self.logger)
         self.context_data = {}
+        self.rolepack_loader = RolePackLoader(config, self.logger)
 
         self._load_base_template()
+
+    def _resolve_rolepack_prompt(self, user_prompt: str) -> str:
+        """Expand a short @rolepack directive, failing closed on package drift."""
+
+        loader = getattr(self, "rolepack_loader", None)
+        if loader is None:
+            loader = RolePackLoader(getattr(self, "config", {}), self.logger)
+            self.rolepack_loader = loader
+        try:
+            return loader.resolve(user_prompt)
+        except RolePackError as exc:
+            self.logger.bind(tag=TAG).error(f"角色包加载失败: {exc}")
+            return rolepack_failure_prompt()
 
     def _load_base_template(self):
         """加载基础提示词模板"""
@@ -127,6 +146,7 @@ class PromptManager:
 
     def get_quick_prompt(self, user_prompt: str, device_id: str = None) -> str:
         """快速获取系统提示词（使用用户配置）"""
+        user_prompt = self._resolve_rolepack_prompt(user_prompt)
         device_cache_key = f"device_prompt:{device_id}"
         cached_device_prompt = self.cache_manager.get(
             self.CacheType.DEVICE_PROMPT, device_cache_key
@@ -280,6 +300,7 @@ class PromptManager:
         self, user_prompt: str, device_id: str, client_ip: str = None, *args, **kwargs
     ) -> str:
         """构建增强的系统提示词"""
+        user_prompt = self._resolve_rolepack_prompt(user_prompt)
         if not self.base_prompt_template:
             return user_prompt
 

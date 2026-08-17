@@ -1,0 +1,4 @@
+# Role-pack fingerprints are byte-for-byte. Keep generated inputs and outputs
+# stable across Windows and Linux checkouts.
+main/xiaozhi-server/rolepacks/nixi/** text eol=lf
+tools/nixi_rolepack/** text eol=lf

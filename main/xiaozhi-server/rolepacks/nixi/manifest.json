@@ -1,0 +1,103 @@
+{
+  "artifact": "xiaozhi_rolepack",
+  "schema_version": 1,
+  "pack_id": "nixi",
+  "version": "1.0.0",
+  "pack_file": "pack.json",
+  "files": [
+    {
+      "path": "pack.json",
+      "sha256": "2d402bf0fdb1c435b98b6c167c4ec2c42dd2f3b82ad54cf2af13444c2e3dce0b",
+      "bytes": 972
+    },
+    {
+      "path": "prompts/common.txt",
+      "sha256": "135d7fdca11611ad43139f5d1e16350c109f3ed138ded002366f6d4ca59bc392",
+      "bytes": 3228
+    },
+    {
+      "path": "prompts/wu.txt",
+      "sha256": "120ca2b0cd0ded079c965b114333461556680da5ce08951337f6a487d4c9ee8c",
+      "bytes": 1983
+    },
+    {
+      "path": "prompts/chi.txt",
+      "sha256": "2053b1a29afa810eaa8ed1cf676c40ad88298bc149ccda1035c6b2dce72d8082",
+      "bytes": 2407
+    },
+    {
+      "path": "prompts/duo.txt",
+      "sha256": "bbfbe85010d716dece5805e47e71d4309ffd6b5c5715cac6ac0fb87f5ddba642",
+      "bytes": 2479
+    }
+  ],
+  "source": {
+    "schema_version": 1,
+    "source": "nixi-roleplay Claude Code skill",
+    "source_version": "1.0.0",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "6e044c01b9c7ac0d0230ec68f3819bea82b38ee7fa9413fef85cd69e43ff53b5",
+        "bytes": 8313
+      },
+      {
+        "path": "manifest.json",
+        "sha256": "b968ed1f3f9b328f9dd3774700d1440421bb4d811ce881d2c10747ec5facd523",
+        "bytes": 13450
+      },
+      {
+        "path": "references/state-schema.md",
+        "sha256": "7959c5834d2e0fee6c40416fac27cebf667fe87a0b815f73c0ac42ec51600365",
+        "bytes": 6897
+      },
+      {
+        "path": "references/canon-and-layers.md",
+        "sha256": "86c00c6a3ef732ef236e7661157fedd90afa173e3449ab6d85d09137615cb8c3",
+        "bytes": 5678
+      },
+      {
+        "path": "references/behavior-wu.md",
+        "sha256": "177906ca1e67eccc9e0457bb4e77f7c763da0de2c1c58926c593ccc70d8d7d74",
+        "bytes": 6784
+      },
+      {
+        "path": "references/voice-wu.md",
+        "sha256": "bc36a536afb05ea3360a1b0602353f5f931fc369030636ae38e09d1ea293832c",
+        "bytes": 3703
+      },
+      {
+        "path": "references/behavior-chi.md",
+        "sha256": "5db9106afc36b2b50783142172182fd761a3a38e6b8bd82490e572548a711250",
+        "bytes": 8388
+      },
+      {
+        "path": "references/voice-chi.md",
+        "sha256": "6b29adbbac18c01b63524804b0537dc054a62c6911f9b6e3148af02f04ec2ac8",
+        "bytes": 4353
+      },
+      {
+        "path": "references/duo-protocol.md",
+        "sha256": "a0f6c823e16c558c69b71ee48f6b03c331f53626e4a808d96197972db48cbf44",
+        "bytes": 6297
+      },
+      {
+        "path": "references/drama-overlay.md",
+        "sha256": "135051cc9b456cb136009136fda3169c8baa205b11b7f7892884839607575ab4",
+        "bytes": 6186
+      },
+      {
+        "path": "references/safety-boundaries.md",
+        "sha256": "652be362ebac264de7d846683f14dfc2f4308304d99cad5c330f747cff9afb19",
+        "bytes": 3641
+      }
+    ]
+  },
+  "build_properties": {
+    "deterministic": true,
+    "runtime_requires_authoring_skill": false,
+    "runtime_writes": false,
+    "tts_private_psychology": "disabled",
+    "duo_audio": "single_tts_voice_with_spoken_speaker_labels"
+  }
+}

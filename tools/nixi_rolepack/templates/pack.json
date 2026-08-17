@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "nixi",
+  "version": "1.0.0",
+  "display_name": "《逆袭》吴所畏与池骋语音角色包",
+  "common_prompt": "prompts/common.txt",
+  "allowed_options": ["canon", "stage", "audience", "psychology", "voice"],
+  "defaults": {"canon": "novel"},
+  "audiences": ["participant", "observer"],
+  "canons": {
+    "novel": {
+      "default_stage": "S7",
+      "stages": ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]
+    },
+    "drama": {
+      "default_stage": "D6",
+      "stages": ["D1", "D2", "D3", "D4", "D5", "D6"]
+    }
+  },
+  "modes": {
+    "wu": {
+      "display_name": "吴所畏",
+      "prompt": "prompts/wu.txt",
+      "default_audience": "participant"
+    },
+    "chi": {
+      "display_name": "池骋",
+      "prompt": "prompts/chi.txt",
+      "default_audience": "participant"
+    },
+    "duo": {
+      "display_name": "吴所畏与池骋",
+      "prompt": "prompts/duo.txt",
+      "default_audience": "observer"
+    }
+  }
+}
