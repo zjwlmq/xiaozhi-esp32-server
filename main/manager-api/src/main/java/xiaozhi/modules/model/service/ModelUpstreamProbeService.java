@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,6 +49,7 @@ public class ModelUpstreamProbeService {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    @Autowired
     public ModelUpstreamProbeService(ModelConfigDao modelConfigDao, ObjectMapper objectMapper) {
         this(modelConfigDao, objectMapper, HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
