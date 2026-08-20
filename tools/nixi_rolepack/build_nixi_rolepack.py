@@ -83,7 +83,7 @@ def build(output: Path, skill_root: Optional[Path]) -> dict:
         "artifact": "xiaozhi_rolepack",
         "schema_version": 1,
         "pack_id": "nixi",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "pack_file": "pack.json",
         "files": manifest_files,
         "source": source_manifest,
@@ -93,6 +93,7 @@ def build(output: Path, skill_root: Optional[Path]) -> dict:
             "runtime_writes": False,
             "tts_private_psychology": "disabled",
             "duo_audio": "single_tts_voice_with_spoken_speaker_labels",
+            "daughter_profile": "manager_editable_session_fiction",
         },
     }
     manifest_path = output / "manifest.json"

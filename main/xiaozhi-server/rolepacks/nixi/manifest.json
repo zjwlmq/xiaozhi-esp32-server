@@ -2,18 +2,18 @@
   "artifact": "xiaozhi_rolepack",
   "schema_version": 1,
   "pack_id": "nixi",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "pack_file": "pack.json",
   "files": [
     {
       "path": "pack.json",
-      "sha256": "2d402bf0fdb1c435b98b6c167c4ec2c42dd2f3b82ad54cf2af13444c2e3dce0b",
-      "bytes": 972
+      "sha256": "fb11b79c02e1ae6ab52c65de49bf6407d315bff8f8a0449bacbf6dffbb3e20ea",
+      "bytes": 1004
     },
     {
       "path": "prompts/common.txt",
-      "sha256": "135d7fdca11611ad43139f5d1e16350c109f3ed138ded002366f6d4ca59bc392",
-      "bytes": 3228
+      "sha256": "57e2790179e5047b5f8c765669ae7788b9824aa8c159dfd363ad4daffdf56f1b",
+      "bytes": 2960
     },
     {
       "path": "prompts/wu.txt",
@@ -27,8 +27,8 @@
     },
     {
       "path": "prompts/duo.txt",
-      "sha256": "bbfbe85010d716dece5805e47e71d4309ffd6b5c5715cac6ac0fb87f5ddba642",
-      "bytes": 2479
+      "sha256": "33c13492990778885250c9f5216a52650c3fbbf5fa26f93235f307e3af4a8a47",
+      "bytes": 2612
     }
   ],
   "source": {
@@ -98,6 +98,7 @@
     "runtime_requires_authoring_skill": false,
     "runtime_writes": false,
     "tts_private_psychology": "disabled",
-    "duo_audio": "single_tts_voice_with_spoken_speaker_labels"
+    "duo_audio": "single_tts_voice_with_spoken_speaker_labels",
+    "daughter_profile": "manager_editable_session_fiction"
   }
 }

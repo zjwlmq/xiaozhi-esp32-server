@@ -138,6 +138,8 @@
                       />
                     </el-form-item>
 
+                    <nixi-daughter-settings v-model="form.systemPrompt" />
+
                     <el-form-item>
                       <template #label>
                         <el-tooltip :content="$t('roleConfig.tooltip.memoryHis')" placement="top" effect="light" popper-class="custom-tooltip">
@@ -493,6 +495,7 @@ import FunctionDialog from "@/components/FunctionDialog.vue";
 import ContextProviderDialog from "@/components/ContextProviderDialog.vue";
 import TtsAdvancedSettings from "@/components/TtsAdvancedSettings.vue";
 import AgentSnapshotDialog from "@/components/AgentSnapshotDialog.vue";
+import NixiDaughterSettings from "@/components/NixiDaughterSettings.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 import i18n from "@/i18n";
 import featureManager from "@/utils/featureManager"; 
@@ -500,7 +503,7 @@ import VersionFooter from "@/components/VersionFooter.vue";
 
 export default {
   name: "RoleConfigPage",
-  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, VersionFooter },
+  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, NixiDaughterSettings, VersionFooter },
   data() {
     return {
       showContextProviderDialog: false,

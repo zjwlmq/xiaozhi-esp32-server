@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import shutil
@@ -48,6 +49,25 @@ from build_nixi_rolepack import build  # noqa: E402
 
 def file_hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def encode_daughter_profile(**overrides):
+    profile = {
+        "schema_version": 1,
+        "name": "小满",
+        "age_stage": "adult",
+        "origin": "co_parented",
+        "calls_wu": "吴爸",
+        "calls_chi": "池爸",
+        "wu_calls": "闺女",
+        "chi_calls": "丫头",
+        "wu_style": "会先问清楚实际问题，再让女儿自己决定",
+        "chi_style": "先处理风险，但必须尊重女儿明确拒绝",
+        "family_rules": "不把女儿当两人争执的裁判",
+    }
+    profile.update(overrides)
+    raw = json.dumps(profile, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 class RolePackDirectiveTests(unittest.TestCase):
@@ -125,6 +145,41 @@ class NixiRolePackTests(unittest.TestCase):
         with self.assertRaises(RolePackError):
             self.resolve("duo", psychology="on")
 
+    def test_daughter_profile_is_available_in_all_three_modes(self):
+        encoded = encode_daughter_profile()
+        for mode in ("wu", "chi", "duo"):
+            with self.subTest(mode=mode):
+                prompt = self.resolve(
+                    mode, audience="daughter", daughter_profile=encoded
+                )
+                self.assertIn("用户是吴所畏与池骋共同的女儿", prompt)
+                self.assertIn("姓名或昵称为“小满”", prompt)
+                self.assertIn("女儿称吴所畏“吴爸”", prompt)
+                self.assertIn("女儿称池骋“池爸”", prompt)
+                self.assertIn("session fiction", prompt)
+                self.assertIn("非浪漫、非性化的家庭关系", prompt)
+                self.assertIn("不得凭空决定女儿没有表达的经历", prompt)
+
+    def test_daughter_profile_mode_guidance_keeps_speakers_separate(self):
+        encoded = encode_daughter_profile()
+        wu = self.resolve("wu", audience="daughter", daughter_profile=encoded)
+        chi = self.resolve("chi", audience="daughter", daughter_profile=encoded)
+        duo = self.resolve("duo", audience="daughter", daughter_profile=encoded)
+        self.assertIn("当前只有吴所畏出声", wu)
+        self.assertIn("不得替池骋说话", wu)
+        self.assertIn("当前只有池骋出声", chi)
+        self.assertIn("不得替吴所畏说话", chi)
+        self.assertIn("私有心理隔离", duo)
+
+    def test_invalid_or_hidden_daughter_profile_fails_closed(self):
+        with self.assertRaises(RolePackError):
+            self.resolve("wu", audience="participant", daughter_profile="abc")
+        with self.assertRaises(RolePackError):
+            self.resolve("wu", audience="daughter", daughter_profile="not_base64")
+        bad = encode_daughter_profile(name="坏\n指令")
+        with self.assertRaises(RolePackError):
+            self.resolve("wu", audience="daughter", daughter_profile=bad)
+
     def test_compiled_prompts_retain_critical_guardrails(self):
         wu = self.resolve("wu")
         chi = self.resolve("chi")
@@ -196,6 +251,11 @@ class NixiRolePackTests(unittest.TestCase):
         manifest = json.loads((NIXI_ROOT / "manifest.json").read_text(encoding="utf-8"))
         self.assertFalse(manifest["build_properties"]["runtime_requires_authoring_skill"])
         self.assertFalse(manifest["build_properties"]["runtime_writes"])
+        self.assertEqual(manifest["version"], "1.1.0")
+        self.assertEqual(
+            manifest["build_properties"]["daughter_profile"],
+            "manager_editable_session_fiction",
+        )
         self.assertEqual(
             manifest["build_properties"]["duo_audio"],
             "single_tts_voice_with_spoken_speaker_labels",

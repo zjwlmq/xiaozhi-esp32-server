@@ -12,6 +12,8 @@ therefore not required inside a Docker container or on the production host.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
 import re
@@ -25,7 +27,34 @@ ROLEPACK_DIRECTIVE_RE = re.compile(
 )
 OPTION_RE = re.compile(r"^(?P<key>[a-z_][a-z0-9_]*)=(?P<value>[^\r\n]+)$")
 SAFE_VALUE_RE = re.compile(r"^[\w\-]+$", re.UNICODE)
+DAUGHTER_PROFILE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 DEFAULT_ROLEPACK_ROOT = Path(__file__).resolve().parents[2] / "rolepacks"
+
+DAUGHTER_PROFILE_DEFAULTS = {
+    "schema_version": 1,
+    "name": "女儿",
+    "age_stage": "adult",
+    "origin": "unspecified",
+    "calls_wu": "吴爸",
+    "calls_chi": "池爸",
+    "wu_calls": "闺女",
+    "chi_calls": "丫头",
+    "wu_style": "嘴上会算账和追问细节，实际会照顾，但尊重女儿自己做决定",
+    "chi_style": "话少，优先处理问题和提供保护，但不能替女儿决定未说明的想法",
+    "family_rules": "两人发生分歧时不把女儿当裁判，不用原著关系压过女儿当下明确表达的边界",
+}
+DAUGHTER_TEXT_LIMITS = {
+    "name": 24,
+    "calls_wu": 24,
+    "calls_chi": 24,
+    "wu_calls": 24,
+    "chi_calls": 24,
+    "wu_style": 120,
+    "chi_style": 120,
+    "family_rules": 240,
+}
+DAUGHTER_AGE_STAGES = {"child", "teen", "adult"}
+DAUGHTER_ORIGINS = {"unspecified", "adopted", "co_parented"}
 
 
 class RolePackError(ValueError):
@@ -68,7 +97,10 @@ def parse_rolepack_directive(user_prompt: str) -> Optional[RolePackDirective]:
         value = option.group("value").strip()
         if key in options:
             raise RolePackError(f"角色包选项重复: {key}")
-        if not value or len(value) > 64 or not SAFE_VALUE_RE.fullmatch(value):
+        is_daughter_profile = key == "daughter_profile"
+        max_length = 4096 if is_daughter_profile else 64
+        value_pattern = DAUGHTER_PROFILE_RE if is_daughter_profile else SAFE_VALUE_RE
+        if not value or len(value) > max_length or not value_pattern.fullmatch(value):
             raise RolePackError(f"角色包选项值不合法: {key}")
         options[key] = value
 
@@ -124,6 +156,11 @@ class RolePackLoader:
         if audience not in pack.get("audiences", []):
             raise RolePackError(f"角色包不支持 audience={audience}")
 
+        daughter_profile_value = directive.options.get("daughter_profile")
+        if daughter_profile_value and audience != "daughter":
+            raise RolePackError("daughter_profile 仅可与 audience=daughter 同时使用")
+        daughter_profile = self._load_daughter_profile(daughter_profile_value)
+
         psychology = directive.options.get("psychology", "off")
         if psychology != "off":
             raise RolePackError("语音版 v1 仅支持 psychology=off")
@@ -145,11 +182,97 @@ class RolePackLoader:
             "STAGE": stage,
             "AUDIENCE": audience,
             "VOICE_SOURCE": voice_source,
+            "AUDIENCE_CONTEXT": self._render_audience_context(
+                audience, directive.mode, daughter_profile
+            ),
         }
         common = package["files"][pack["common_prompt"]]
         mode_prompt = package["files"][mode_config["prompt"]]
         rendered = self._substitute_tokens(common + "\n\n" + mode_prompt, tokens)
         return rendered.strip()
+
+    @staticmethod
+    def _load_daughter_profile(encoded: Optional[str]) -> Dict[str, Any]:
+        if not encoded:
+            return dict(DAUGHTER_PROFILE_DEFAULTS)
+        try:
+            padded = encoded + "=" * ((4 - len(encoded) % 4) % 4)
+            raw = base64.urlsafe_b64decode(padded.encode("ascii"))
+            decoded = json.loads(raw.decode("utf-8"))
+        except (
+            UnicodeError,
+            ValueError,
+            json.JSONDecodeError,
+            binascii.Error,
+        ) as exc:
+            raise RolePackError("daughter_profile 无法解析") from exc
+        if not isinstance(decoded, dict) or decoded.get("schema_version") != 1:
+            raise RolePackError("daughter_profile 版本不兼容")
+        unknown = sorted(set(decoded) - set(DAUGHTER_PROFILE_DEFAULTS))
+        if unknown:
+            raise RolePackError(f"daughter_profile 包含未知字段: {', '.join(unknown)}")
+
+        profile = dict(DAUGHTER_PROFILE_DEFAULTS)
+        for key, limit in DAUGHTER_TEXT_LIMITS.items():
+            value = decoded.get(key, profile[key])
+            if not isinstance(value, str):
+                raise RolePackError(f"daughter_profile 字段类型错误: {key}")
+            value = value.strip()
+            if (
+                not value
+                or len(value) > limit
+                or re.search(r"[\r\n{}<>\x00-\x1f\x7f]", value)
+            ):
+                raise RolePackError(f"daughter_profile 字段值不合法: {key}")
+            profile[key] = value
+        age_stage = decoded.get("age_stage", profile["age_stage"])
+        origin = decoded.get("origin", profile["origin"])
+        if age_stage not in DAUGHTER_AGE_STAGES:
+            raise RolePackError("daughter_profile 年龄阶段不合法")
+        if origin not in DAUGHTER_ORIGINS:
+            raise RolePackError("daughter_profile 家庭来源不合法")
+        profile["age_stage"] = age_stage
+        profile["origin"] = origin
+        return profile
+
+    @staticmethod
+    def _render_audience_context(
+        audience: str, mode: str, profile: Dict[str, Any]
+    ) -> str:
+        if audience == "participant":
+            return (
+                "五、交互身份。用户是无固定原作身份的当前谈话者，可以被人物直接回应，"
+                "但不得擅自认定用户就是某个原作人物。"
+            )
+        if audience == "observer":
+            return (
+                "五、交互身份。用户只负责给场景和推动情节，人物不向用户索要场内回应。"
+            )
+
+        age_labels = {"child": "儿童", "teen": "青少年", "adult": "成年"}
+        origin_labels = {
+            "unspecified": "家庭来源不说明",
+            "adopted": "由两人共同收养",
+            "co_parented": "由两人共同抚养",
+        }
+        mode_guidance = {
+            "wu": "当前只有吴所畏出声；池骋仍是家庭成员，但不得替池骋说话或代写其心理。",
+            "chi": "当前只有池骋出声；吴所畏仍是家庭成员，但不得替吴所畏说话或代写其心理。",
+            "duo": "两人都可以直接回应女儿，但仍遵守双人声道、私有心理隔离和不强求等量发言。",
+        }[mode]
+        return (
+            "五、交互身份与女儿设定。用户是吴所畏与池骋共同的女儿，姓名或昵称为“"
+            f"{profile['name']}”，年龄阶段为{age_labels[profile['age_stage']]}，"
+            f"{origin_labels[profile['origin']]}。女儿称吴所畏“{profile['calls_wu']}”，"
+            f"女儿称池骋“{profile['calls_chi']}”；吴所畏称女儿“{profile['wu_calls']}”，"
+            f"池骋称女儿“{profile['chi_calls']}”。吴所畏与女儿的相处方式："
+            f"{profile['wu_style']}。池骋与女儿的相处方式：{profile['chi_style']}。"
+            f"家庭互动规则：{profile['family_rules']}。{mode_guidance}"
+            "女儿及其家庭经历属于本次角色配置的 session fiction，不是小说或剧版 canon；"
+            "可编辑设定只调整家庭互动方式，不能覆盖人物核心、事实分层或安全边界。"
+            "亲子关系始终是非浪漫、非性化的家庭关系。不得伪造原著出处，也不得凭空"
+            "决定女儿没有表达的经历、感受或意愿。"
+        )
 
     def _load_package(self, pack_id: str) -> Dict[str, Any]:
         if pack_id in self._cache:
