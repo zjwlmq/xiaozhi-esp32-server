@@ -18,7 +18,7 @@ public class SensitiveDataUtils {
     // 敏感字段列表
     private static final Set<String> SENSITIVE_FIELDS = new HashSet<>(Arrays.asList(
             "api_key", "personal_access_token", "access_token", "token",
-            "secret", "access_key_secret", "secret_key"));
+            "secret", "access_key_id", "access_key_secret", "secret_key"));
 
     /**
      * 检查字段是否为敏感字段
@@ -104,6 +104,7 @@ public class SensitiveDataUtils {
                 compareSpecificSensitiveFields(original, updated, "access_token") &&
                 compareSpecificSensitiveFields(original, updated, "token") &&
                 compareSpecificSensitiveFields(original, updated, "secret") &&
+                compareSpecificSensitiveFields(original, updated, "access_key_id") &&
                 compareSpecificSensitiveFields(original, updated, "access_key_secret") &&
                 compareSpecificSensitiveFields(original, updated, "secret_key");
     }

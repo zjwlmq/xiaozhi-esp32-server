@@ -126,7 +126,7 @@ export default {
       dialogTitle: "新增供应器",
       isAllSelected: false,
       DropdownVisible: false,
-      sensitive_keys: ["api_key", "personal_access_token", "access_token", "token", "secret", "access_key_secret", "secret_key"],
+      sensitive_keys: ["api_key", "personal_access_token", "access_token", "token", "secret", "access_key_id", "access_key_secret", "secret_key"],
       providerForm: {
         id: null,
         modelType: "",

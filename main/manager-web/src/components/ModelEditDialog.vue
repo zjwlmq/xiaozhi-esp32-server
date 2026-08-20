@@ -203,6 +203,7 @@ export default {
         "access_token",
         "token",
         "secret",
+        "access_key_id",
         "access_key_secret",
         "secret_key",
       ],
@@ -583,6 +584,7 @@ export default {
         access_token: "访问令牌",
         token: "令牌",
         secret: "密钥",
+        access_key_id: "Access Key ID",
         access_key_secret: "访问密钥",
         secret_key: "密钥",
       };

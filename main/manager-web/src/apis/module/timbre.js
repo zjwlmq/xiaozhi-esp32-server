@@ -2,6 +2,41 @@ import { getServiceUrl } from '../api';
 import RequestService from '../httpRequest';
 
 export default {
+    // 查询火山引擎账号下的声音复刻音色（AK/SK 只在后端使用）
+    getVolcengineUpstreamVoices(params, callback, failCallback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/ttsVoice/upstream/volcengine/list`)
+            .method('POST')
+            .data(JSON.stringify({
+                ttsModelId: params.ttsModelId,
+                cloneVersion: params.cloneVersion
+            }))
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res.data);
+            })
+            .fail((err) => failCallback && failCallback(err))
+            .networkFail((err) => failCallback && failCallback(err))
+            .send();
+    },
+    // 将选中的上游复刻音色导入本地音色库
+    importVolcengineUpstreamVoices(params, callback, failCallback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/ttsVoice/upstream/volcengine/import`)
+            .method('POST')
+            .data(JSON.stringify({
+                ttsModelId: params.ttsModelId,
+                cloneVersion: params.cloneVersion,
+                speakerIds: params.speakerIds
+            }))
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res.data);
+            })
+            .fail((err) => failCallback && failCallback(err))
+            .networkFail((err) => failCallback && failCallback(err))
+            .send();
+    },
     // 获取音色
     getVoiceList(params, callback) {
         const queryParams = new URLSearchParams({

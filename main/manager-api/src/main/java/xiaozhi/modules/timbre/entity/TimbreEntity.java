@@ -54,6 +54,9 @@ public class TimbreEntity {
     @Schema(description = "音频播放地址")
     private String voiceDemo;
 
+    @Schema(description = "上游复刻音色资源ID，例如 seed-icl-1.0")
+    private String upstreamResourceId;
+
     @Schema(description = "更新者")
     @TableField(fill = FieldFill.UPDATE)
     private Long updater;

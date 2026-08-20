@@ -23,7 +23,12 @@ import xiaozhi.common.utils.Result;
 import xiaozhi.common.validator.ValidatorUtils;
 import xiaozhi.modules.timbre.dto.TimbreDataDTO;
 import xiaozhi.modules.timbre.dto.TimbrePageDTO;
+import xiaozhi.modules.timbre.dto.VolcengineUpstreamVoiceListDTO;
+import xiaozhi.modules.timbre.dto.VolcengineVoiceImportRequestDTO;
+import xiaozhi.modules.timbre.dto.VolcengineVoiceImportResultDTO;
+import xiaozhi.modules.timbre.dto.VolcengineVoiceSyncRequestDTO;
 import xiaozhi.modules.timbre.service.TimbreService;
+import xiaozhi.modules.timbre.service.VolcengineVoiceSyncService;
 import xiaozhi.modules.timbre.vo.TimbreDetailsVO;
 
 /**
@@ -38,6 +43,25 @@ import xiaozhi.modules.timbre.vo.TimbreDetailsVO;
 @Tag(name = "音色管理")
 public class TimbreController {
     private final TimbreService timbreService;
+    private final VolcengineVoiceSyncService volcengineVoiceSyncService;
+
+    @PostMapping("/upstream/volcengine/list")
+    @Operation(summary = "获取火山引擎上游复刻音色")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<VolcengineUpstreamVoiceListDTO> getVolcengineVoices(
+            @RequestBody VolcengineVoiceSyncRequestDTO request) {
+        return new Result<VolcengineUpstreamVoiceListDTO>().ok(
+                volcengineVoiceSyncService.fetchVoices(request));
+    }
+
+    @PostMapping("/upstream/volcengine/import")
+    @Operation(summary = "导入火山引擎上游复刻音色")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<VolcengineVoiceImportResultDTO> importVolcengineVoices(
+            @RequestBody VolcengineVoiceImportRequestDTO request) {
+        return new Result<VolcengineVoiceImportResultDTO>().ok(
+                volcengineVoiceSyncService.importVoices(request));
+    }
 
     @GetMapping
     @Operation(summary = "分页查找")

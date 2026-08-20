@@ -46,4 +46,7 @@ public class TimbreDataDTO {
 
     @Schema(description = "音频播放地址")
     private String voiceDemo;
+
+    @Schema(description = "上游复刻音色资源ID")
+    private String upstreamResourceId;
 }

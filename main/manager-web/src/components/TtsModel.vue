@@ -90,6 +90,10 @@
       </div>
     </div>
     <div class="action-buttons">
+      <CustomButton v-if="supportsVolcengineSync" icon="el-icon-refresh" size="small" type="default"
+        @click="openUpstreamSync">
+        {{ $t('ttsModel.syncUpstreamVoices') }}
+      </CustomButton>
       <CustomButton :icon="selectAll ? 'el-icon-circle-close' : 'el-icon-circle-check'" size="small" type="default" @click="toggleSelectAll">
         {{ selectAll ? $t('ttsModel.deselectAll') : $t('ttsModel.selectAll') }}
       </CustomButton>
@@ -100,6 +104,56 @@
         {{ $t('ttsModel.delete') }}
       </CustomButton>
     </div>
+
+    <el-dialog :title="$t('ttsModel.syncUpstreamTitle')" :visible.sync="upstreamDialogVisible"
+      width="860px" append-to-body :close-on-click-modal="false" @closed="resetUpstreamDialog">
+      <div class="upstream-toolbar">
+        <span class="upstream-label">{{ $t('ttsModel.cloneVersion') }}</span>
+        <el-select v-model="upstreamCloneVersion" @change="fetchUpstreamVoices" :disabled="upstreamLoading || importingVoices">
+          <el-option :label="$t('ttsModel.cloneVersion1')" value="1.0"></el-option>
+          <el-option :label="$t('ttsModel.cloneVersion2')" value="2.0"></el-option>
+        </el-select>
+        <el-button icon="el-icon-refresh" :loading="upstreamLoading" @click="fetchUpstreamVoices">
+          {{ $t('ttsModel.refreshUpstream') }}
+        </el-button>
+        <span class="upstream-tip">{{ $t('ttsModel.upstreamCredentialTip') }}</span>
+      </div>
+
+      <el-table ref="upstreamTable" v-loading="upstreamLoading" :data="upstreamVoices" height="420"
+        @selection-change="handleUpstreamSelectionChange">
+        <el-table-column type="selection" width="48" :selectable="isUpstreamVoiceSelectable"></el-table-column>
+        <el-table-column prop="name" :label="$t('ttsModel.voiceName')" min-width="140"></el-table-column>
+        <el-table-column prop="speakerId" label="SpeakerID" min-width="190"></el-table-column>
+        <el-table-column :label="$t('ttsModel.upstreamState')" width="110" align="center">
+          <template slot-scope="scope">
+            <el-tag size="mini" :type="upstreamStateType(scope.row.state)">{{ scope.row.state || 'Unknown' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('ttsModel.preview')" width="170" align="center">
+          <template slot-scope="scope">
+            <AudioPlayer v-if="scope.row.demoAudio" :audioUrl="scope.row.demoAudio" />
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('ttsModel.importState')" width="100" align="center">
+          <template slot-scope="scope">
+            <el-tag v-if="scope.row.imported" type="info" size="mini">{{ $t('ttsModel.imported') }}</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div slot="footer" class="upstream-footer">
+        <span>{{ $t('ttsModel.selectedVoiceCount', { count: selectedUpstreamVoices.length }) }}</span>
+        <div>
+          <el-button @click="upstreamDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+          <el-button type="primary" :loading="importingVoices" :disabled="selectedUpstreamVoices.length === 0"
+            @click="importUpstreamVoices">
+            {{ $t('ttsModel.importSelected') }}
+          </el-button>
+        </div>
+      </div>
+    </el-dialog>
   </CustomDialog>
 </template>
 
@@ -142,6 +196,12 @@ export default {
       selectedRows: [],
       loading: false,
       showReferenceColumns: false, // 控制是否显示参考列
+      upstreamDialogVisible: false,
+      upstreamCloneVersion: '2.0',
+      upstreamVoices: [],
+      selectedUpstreamVoices: [],
+      upstreamLoading: false,
+      importingVoices: false,
     };
   },
   watch: {
@@ -169,6 +229,10 @@ export default {
     }
   },
   computed: {
+    supportsVolcengineSync() {
+      return this.modelConfig && this.modelConfig.configJson
+        && this.modelConfig.configJson.type === 'huoshan_double_stream';
+    },
     filteredTtsModels() {
       return this.ttsModels.filter(model =>
         model.voiceName.toLowerCase().includes(this.searchQuery.toLowerCase())
@@ -187,6 +251,83 @@ export default {
     window.removeEventListener('mousemove', this.handleDrag);
   },
   methods: {
+    openUpstreamSync() {
+      this.upstreamDialogVisible = true;
+      this.fetchUpstreamVoices();
+    },
+
+    resetUpstreamDialog() {
+      this.upstreamVoices = [];
+      this.selectedUpstreamVoices = [];
+      this.upstreamLoading = false;
+      this.importingVoices = false;
+    },
+
+    fetchUpstreamVoices() {
+      if (!this.ttsModelId || this.upstreamLoading) return;
+      this.upstreamLoading = true;
+      this.selectedUpstreamVoices = [];
+      Api.timbre.getVolcengineUpstreamVoices({
+        ttsModelId: this.ttsModelId,
+        cloneVersion: this.upstreamCloneVersion
+      }, (response) => {
+        this.upstreamLoading = false;
+        if (response && response.code === 0) {
+          this.upstreamVoices = (response.data && response.data.voices) || [];
+          this.$nextTick(() => this.$refs.upstreamTable && this.$refs.upstreamTable.clearSelection());
+          return;
+        }
+        this.upstreamVoices = [];
+        this.$message.error((response && response.msg) || this.$t('ttsModel.fetchUpstreamFailed'));
+      }, (error) => {
+        this.upstreamLoading = false;
+        this.upstreamVoices = [];
+        this.$message.error((error && error.data && error.data.msg) || this.$t('ttsModel.fetchUpstreamFailed'));
+      });
+    },
+
+    handleUpstreamSelectionChange(rows) {
+      this.selectedUpstreamVoices = rows;
+    },
+
+    isUpstreamVoiceSelectable(row) {
+      const state = String(row.state || '').toLowerCase();
+      return !row.imported && (state === 'success' || state === 'active');
+    },
+
+    upstreamStateType(state) {
+      const normalized = String(state || '').toLowerCase();
+      if (normalized === 'success' || normalized === 'active') return 'success';
+      if (normalized === 'failed' || normalized === 'failure') return 'danger';
+      return 'warning';
+    },
+
+    importUpstreamVoices() {
+      if (this.selectedUpstreamVoices.length === 0 || this.importingVoices) return;
+      this.importingVoices = true;
+      Api.timbre.importVolcengineUpstreamVoices({
+        ttsModelId: this.ttsModelId,
+        cloneVersion: this.upstreamCloneVersion,
+        speakerIds: this.selectedUpstreamVoices.map(item => item.speakerId)
+      }, (response) => {
+        this.importingVoices = false;
+        if (response && response.code === 0) {
+          const result = response.data || {};
+          this.$message.success(this.$t('ttsModel.importSuccess', {
+            imported: result.importedCount || 0,
+            skipped: result.skippedCount || 0
+          }));
+          this.loadData();
+          this.fetchUpstreamVoices();
+          return;
+        }
+        this.$message.error((response && response.msg) || this.$t('ttsModel.importFailed'));
+      }, (error) => {
+        this.importingVoices = false;
+        this.$message.error((error && error.data && error.data.msg) || this.$t('ttsModel.importFailed'));
+      });
+    },
+
     // 更新是否显示参考列
     updateShowReferenceColumns() {
       if (this.modelConfig && this.modelConfig.configJson) {
@@ -685,6 +826,32 @@ export default {
 .action-buttons {
   padding-top: 10px;
   text-align: left;
+}
+
+.upstream-toolbar,
+.upstream-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upstream-toolbar {
+  margin-bottom: 16px;
+}
+
+.upstream-label {
+  font-weight: 500;
+}
+
+.upstream-tip {
+  flex: 1;
+  color: #909399;
+  font-size: 12px;
+  text-align: right;
+}
+
+.upstream-footer {
+  justify-content: space-between;
 }
 
 /* 输入框自适应 */

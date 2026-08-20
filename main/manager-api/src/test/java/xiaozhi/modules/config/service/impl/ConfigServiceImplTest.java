@@ -35,6 +35,22 @@ import xiaozhi.modules.voiceclone.service.VoiceCloneService;
 class ConfigServiceImplTest {
 
     @Test
+    void cloneVoiceUsesItsPersistedUpstreamVersion() {
+        assertEquals("seed-icl-2.0",
+                ConfigServiceImpl.resolveVolcengineCloneResourceId("seed-icl-2.0", "seed-tts-1.0"));
+        assertEquals("seed-icl-1.0",
+                ConfigServiceImpl.resolveVolcengineCloneResourceId("seed-icl-1.0", "seed-tts-2.0"));
+    }
+
+    @Test
+    void unknownCloneResourceCannotOverrideConfiguredVersionFallback() {
+        assertEquals("seed-icl-2.0",
+                ConfigServiceImpl.resolveVolcengineCloneResourceId("unexpected-resource", "seed-tts-2.0"));
+        assertEquals("seed-icl-1.0",
+                ConfigServiceImpl.resolveVolcengineCloneResourceId(null, "volc.service_type.10029"));
+    }
+
+    @Test
     void cachedServerConfigIsCheckedAsAStringKeyedMapWithoutChangingNestedValues() {
         RedisUtils redisUtils = mock(RedisUtils.class);
         Map<String, Object> nested = new HashMap<>();

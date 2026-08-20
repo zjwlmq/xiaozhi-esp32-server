@@ -98,6 +98,7 @@ public class ConfigServiceImpl implements ConfigService {
                 null,
                 null,
                 null,
+                null,
                 agent.getVadModelId(),
                 agent.getAsrModelId(),
                 null,
@@ -147,12 +148,14 @@ public class ConfigServiceImpl implements ConfigService {
         String voice = null;
         String referenceAudio = null;
         String referenceText = null;
+        String upstreamResourceId = null;
         String language = null;
         TimbreDetailsVO timbre = timbreService.get(agent.getTtsVoiceId());
         if (timbre != null) {
             voice = timbre.getTtsVoice();
             referenceAudio = timbre.getReferenceAudio();
             referenceText = timbre.getReferenceText();
+            upstreamResourceId = timbre.getUpstreamResourceId();
             // 优先使用用户选择的语言，如果没有则使用音色支持的第一个语言
             if (StringUtils.isNotBlank(agent.getTtsLanguage())) {
                 language = agent.getTtsLanguage();
@@ -230,6 +233,7 @@ public class ConfigServiceImpl implements ConfigService {
                 effectivePrompt,
                 agent.getSummaryMemory(),
                 voice,
+                upstreamResourceId,
                 referenceAudio,
                 referenceText,
                 language,
@@ -409,6 +413,7 @@ public class ConfigServiceImpl implements ConfigService {
      * 
      * @param prompt         提示词
      * @param voice          音色
+     * @param upstreamResourceId 上游复刻音色资源ID
      * @param referenceAudio 参考音频路径
      * @param referenceText  参考文本
      * @param vadModelId     VAD模型ID
@@ -424,6 +429,7 @@ public class ConfigServiceImpl implements ConfigService {
             String prompt,
             String summaryMemory,
             String voice,
+            String upstreamResourceId,
             String referenceAudio,
             String referenceText,
             String language,
@@ -478,12 +484,13 @@ public class ConfigServiceImpl implements ConfigService {
                     if (ttsPitch != null)
                         ((Map<String, Object>) model.getConfigJson()).put("ttsPitch", ttsPitch);
 
-                    // 火山引擎声音克隆需要替换resource_id
+                    // 火山引擎声音克隆需要替换 resource_id。上游同步音色使用逐音色
+                    // 记录的 1.0/2.0 资源ID；旧记录按当前模型资源版本安全回退。
                     Map<String, Object> map = (Map<String, Object>) model.getConfigJson();
                     if (Constant.VOICE_CLONE_HUOSHAN_DOUBLE_STREAM.equals(map.get("type"))) {
-                        // 如果voice是”S_”开头的，使用seed-icl-1.0
                         if (voice != null && voice.startsWith("S_")) {
-                            map.put("resource_id", "seed-icl-1.0");
+                            map.put("resource_id", resolveVolcengineCloneResourceId(
+                                    upstreamResourceId, map.get("resource_id")));
                         }
                     }
                 }
@@ -554,5 +561,13 @@ public class ConfigServiceImpl implements ConfigService {
         }
         result.put("prompt", prompt);
         result.put("summaryMemory", summaryMemory);
+    }
+
+    static String resolveVolcengineCloneResourceId(String upstreamResourceId, Object configuredResourceId) {
+        if ("seed-icl-1.0".equals(upstreamResourceId) || "seed-icl-2.0".equals(upstreamResourceId)) {
+            return upstreamResourceId;
+        }
+        String configured = String.valueOf(configuredResourceId);
+        return configured.contains("2.0") ? "seed-icl-2.0" : "seed-icl-1.0";
     }
 }
