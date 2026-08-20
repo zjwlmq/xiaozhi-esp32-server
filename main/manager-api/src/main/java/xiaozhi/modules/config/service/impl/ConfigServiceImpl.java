@@ -32,6 +32,7 @@ import xiaozhi.modules.agent.service.AgentMcpAccessPointService;
 import xiaozhi.modules.agent.service.AgentPluginMappingService;
 import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentTemplateService;
+import xiaozhi.modules.agent.service.NixiRolepackAccessService;
 import xiaozhi.modules.correctword.service.CorrectWordFileService;
 import xiaozhi.modules.agent.vo.AgentVoicePrintVO;
 import xiaozhi.modules.correctword.vo.CorrectWordSimpleVO;
@@ -63,6 +64,7 @@ public class ConfigServiceImpl implements ConfigService {
     private final VoiceCloneService cloneVoiceService;
     private final AgentVoicePrintDao agentVoicePrintDao;
     private final CorrectWordFileService correctWordFileService;
+    private final NixiRolepackAccessService nixiRolepackAccessService;
 
     @Override
     public Map<String, Object> getConfig(Boolean isCache) {
@@ -221,9 +223,11 @@ public class ConfigServiceImpl implements ConfigService {
         buildVoiceprintConfig(agent.getId(), result);
 
         // 构建模块配置
+        String effectivePrompt = nixiRolepackAccessService.enforceRuntimePrompt(
+                agent.getUserId(), agent.getSystemPrompt());
         buildModuleConfig(
                 agent.getAgentName(),
-                agent.getSystemPrompt(),
+                effectivePrompt,
                 agent.getSummaryMemory(),
                 voice,
                 referenceAudio,

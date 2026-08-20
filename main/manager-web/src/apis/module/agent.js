@@ -38,6 +38,39 @@ function terminateCallbackRequest(onTerminalFailure, error) {
 
 
 export default {
+    getNixiAccessPolicy(callback, failCallback) {
+        const request = RequestService.sendRequest()
+            .url(`${getServiceUrl()}/nixi-rolepack/access-policy`)
+            .method('GET')
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res);
+            });
+        if (failCallback) {
+            request.fail((error) => {
+                RequestService.clearRequestTime();
+                failCallback(error);
+            });
+        }
+        request.send();
+    },
+    updateNixiAccessPolicy(policy, callback, failCallback) {
+        const request = RequestService.sendRequest()
+            .url(`${getServiceUrl()}/nixi-rolepack/access-policy`)
+            .method('PUT')
+            .data(policy)
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res);
+            });
+        if (failCallback) {
+            request.fail((error) => {
+                RequestService.clearRequestTime();
+                failCallback(error);
+            });
+        }
+        request.send();
+    },
     // 获取智能体列表
     getAgentList(callback) {
         RequestService.sendRequest()

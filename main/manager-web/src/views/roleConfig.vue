@@ -139,6 +139,7 @@
                     </el-form-item>
 
                     <nixi-daughter-settings v-model="form.systemPrompt" />
+                    <nixi-access-policy-settings v-model="form.systemPrompt" />
 
                     <el-form-item>
                       <template #label>
@@ -496,6 +497,7 @@ import ContextProviderDialog from "@/components/ContextProviderDialog.vue";
 import TtsAdvancedSettings from "@/components/TtsAdvancedSettings.vue";
 import AgentSnapshotDialog from "@/components/AgentSnapshotDialog.vue";
 import NixiDaughterSettings from "@/components/NixiDaughterSettings.vue";
+import NixiAccessPolicySettings from "@/components/NixiAccessPolicySettings.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 import i18n from "@/i18n";
 import featureManager from "@/utils/featureManager"; 
@@ -503,7 +505,7 @@ import VersionFooter from "@/components/VersionFooter.vue";
 
 export default {
   name: "RoleConfigPage",
-  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, NixiDaughterSettings, VersionFooter },
+  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, NixiDaughterSettings, NixiAccessPolicySettings, VersionFooter },
   data() {
     return {
       showContextProviderDialog: false,

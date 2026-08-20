@@ -53,6 +53,7 @@ import xiaozhi.modules.agent.service.AgentChatHistoryService;
 import xiaozhi.modules.agent.service.AgentChatSummaryService;
 import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentTemplateService;
+import xiaozhi.modules.agent.service.NixiRolepackAccessService;
 import xiaozhi.modules.agent.vo.AgentChatHistoryUserVO;
 import xiaozhi.modules.agent.vo.AgentInfoVO;
 import xiaozhi.modules.security.user.SecurityUser;
@@ -71,6 +72,7 @@ public class AgentController {
     private final AgentChatSummaryService agentChatSummaryService;
     private final RedisUtils redisUtils;
     private final AgentTagService agentTagService;
+    private final NixiRolepackAccessService nixiRolepackAccessService;
 
     private void requireAgentPermission(String agentId) {
         if (!agentService.checkAgentPermission(agentId, SecurityUser.getUserId())) {
@@ -180,6 +182,7 @@ public class AgentController {
     @Operation(summary = "更新智能体")
     @RequiresPermissions("sys:role:normal")
     public Result<Void> update(@PathVariable String id, @RequestBody @Valid AgentUpdateDTO dto) {
+        nixiRolepackAccessService.assertPromptAllowed(SecurityUser.getUserId(), dto.getSystemPrompt());
         agentService.updateAgentById(id, dto, SecurityUser.getUserId());
         return new Result<>();
     }

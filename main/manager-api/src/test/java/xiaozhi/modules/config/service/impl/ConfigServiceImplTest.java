@@ -23,6 +23,7 @@ import xiaozhi.modules.agent.service.AgentMcpAccessPointService;
 import xiaozhi.modules.agent.service.AgentPluginMappingService;
 import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentTemplateService;
+import xiaozhi.modules.agent.service.NixiRolepackAccessService;
 import xiaozhi.modules.correctword.service.CorrectWordFileService;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.model.service.ModelConfigService;
@@ -91,6 +92,7 @@ class ConfigServiceImplTest {
                 mock(AgentContextProviderService.class),
                 mock(VoiceCloneService.class),
                 mock(AgentVoicePrintDao.class),
-                mock(CorrectWordFileService.class));
+                mock(CorrectWordFileService.class),
+                mock(NixiRolepackAccessService.class));
     }
 }
