@@ -97,9 +97,10 @@ def build(output: Path, skill_root: Optional[Path]) -> dict:
         },
     }
     manifest_path = output / "manifest.json"
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    # 固定 LF：manifest 参与逐字节确定性校验，不能随平台换行符漂移。
+    # 这里不用 Path.write_text(newline=...)，该参数需要 Python 3.10。
+    with manifest_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest
 
 

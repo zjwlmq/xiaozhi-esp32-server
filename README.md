@@ -41,7 +41,7 @@
 固定候选标签：
 [`volc-anthropic-v1.0.0-rc.7`](https://github.com/zjwlmq/xiaozhi-esp32-server/tree/volc-anthropic-v1.0.0-rc.7)。
 
-本组合版已通过 40 个单元测试及 Python 3.10、YAML、Compose、安装脚本检查。
+本组合版已通过 Python 单元测试及 YAML、Compose、安装脚本检查。
 API Key 只应在部署后通过智控台填写，不得提交到 GitHub。
 
 本仓库沿用上游项目的 [MIT License](./LICENSE)。
