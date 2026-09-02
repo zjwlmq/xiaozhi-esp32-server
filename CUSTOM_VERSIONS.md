@@ -85,3 +85,17 @@ API Key、应用 ID 和访问令牌均应在部署后通过智控台填写，不
 2. 单项补丁分别在 `feat/volcengine-tts-api-key` 与 `feat/anthropic-messages` 维护。
 3. `release/volc-anthropic` 合并两项补丁并维护 CentOS/Ubuntu 部署文件。
 4. 固定候选版本使用对应的版本标签发布，避免分支继续更新后无法复现。
+
+## 上游选择性同步记录
+
+2026-09-02 以 `xinnan-tech/main@c02becdc` 为上游对照版本，以本分支
+`fd05390f` 为同步前起点。本次只同步上游最终生效的两项默认模型更新：
+
+- DeepSeek：`deepseek-chat` → `deepseek-v4-flash`
+- Doubao：`doubao-1-5-pro-32k-250115` → `doubao-seed-2-0-lite-260215`
+
+同步范围同时包含新安装使用的 `config.yaml` 默认值，以及既有数据库配置使用的
+Liquibase 条件迁移；不会覆盖用户已经改成其他模型的配置。Gemini、HA 插件、参数管理
+界面、TTS 超时及该上游版本的其他改动均未同步。
+
+这里的“只同步两项”描述的是本次选择性同步，不表示本定制分支与上游整体只存在两项差异。
