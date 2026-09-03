@@ -79,21 +79,26 @@ def build(output: Path, skill_root: Optional[Path]) -> dict:
             }
         )
 
+    pack = load_json(output / "pack.json")
+    pack_version = pack.get("version")
+    if not isinstance(pack_version, str) or not pack_version.strip():
+        raise RuntimeError("nixi rolepack pack.json has no valid version")
+
     manifest = {
         "artifact": "xiaozhi_rolepack",
         "schema_version": 1,
         "pack_id": "nixi",
-        "version": "1.1.0",
+        "version": pack_version,
         "pack_file": "pack.json",
         "files": manifest_files,
         "source": source_manifest,
         "build_properties": {
             "deterministic": True,
             "runtime_requires_authoring_skill": False,
-            "runtime_writes": False,
+            "runtime_writes": "optional_structured_memory_under_data_dir",
             "tts_private_psychology": "disabled",
             "duo_audio": "single_tts_voice_with_spoken_speaker_labels",
-            "daughter_profile": "manager_editable_session_fiction",
+            "daughter_profile": "manager_editable_continuing_family_life",
         },
     }
     manifest_path = output / "manifest.json"

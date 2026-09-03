@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,21 @@ public class NixiRolepackAccessService {
                 .findFirst()
                 .map(line -> NIXI_DIRECTIVE.matcher(line).find())
                 .orElse(false);
+    }
+
+    public String getNixiMode(String prompt) {
+        if (prompt == null) {
+            return null;
+        }
+        return prompt.lines()
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .findFirst()
+                .map(line -> {
+                    Matcher matcher = NIXI_DIRECTIVE.matcher(line);
+                    return matcher.find() ? matcher.group(1) : null;
+                })
+                .orElse(null);
     }
 
     public boolean isAllowed(Long userId) {

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "nixi",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "display_name": "《逆袭》吴所畏与池骋语音角色包",
   "common_prompt": "prompts/common.txt",
   "allowed_options": ["canon", "stage", "audience", "psychology", "voice", "daughter_profile"],

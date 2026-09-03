@@ -252,6 +252,16 @@ public class ConfigServiceImpl implements ConfigService {
                 result,
                 true);
 
+        String nixiMode = nixiRolepackAccessService.getNixiMode(agent.getSystemPrompt());
+        if (nixiMode != null && nixiRolepackAccessService.isAllowed(agent.getUserId())) {
+            Map<String, Object> lifeContext = new HashMap<>();
+            lifeContext.put("owner_id", String.valueOf(agent.getUserId()));
+            lifeContext.put("agent_id", agent.getId());
+            lifeContext.put("universe_id", "nixi-family");
+            lifeContext.put("mode", nixiMode);
+            result.put("nixi_life_context", lifeContext);
+        }
+
         return result;
     }
 
@@ -514,7 +524,8 @@ public class ConfigServiceImpl implements ConfigService {
                 }
                 if ("Memory".equals(modelTypes[i])) {
                     Map<String, Object> map = (Map<String, Object>) model.getConfigJson();
-                    if ("mem_local_short".equals(map.get("type"))) {
+                    if ("mem_local_short".equals(map.get("type"))
+                            || "nixi_life".equals(map.get("type"))) {
                         memLocalShortLLMModelId = (String) map.get("llm");
                         if (StringUtils.isNotBlank(memLocalShortLLMModelId)
                                 && memLocalShortLLMModelId.equals(llmModelId)) {

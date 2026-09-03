@@ -21,6 +21,12 @@ from core.utils.rolepack_loader import (  # noqa: E402
     RolePackLoader,
     parse_rolepack_directive,
 )
+from core.utils.dialogue import Dialogue, Message  # noqa: E402
+from core.utils.nixi_roleplay_guard import (  # noqa: E402
+    NixiStreamingOutputGuard,
+    forbidden_roleplay_phrases,
+    sanitize_nixi_roleplay_output,
+)
 
 
 class _ImportLogger:
@@ -117,7 +123,8 @@ class NixiRolePackTests(unittest.TestCase):
         self.assertIn("你只扮演吴所畏", wu)
         self.assertIn("你只扮演池骋", chi)
         self.assertIn("不是第三个人物", duo)
-        self.assertNotIn("{{", wu + chi + duo)
+        self.assertNotIn("{{MODE}}", wu + chi + duo)
+        self.assertIn("{{current_datetime}}", wu)
 
     def test_defaults_are_mode_appropriate(self):
         self.assertIn("stage=S7", self.resolve("wu"))
@@ -156,7 +163,9 @@ class NixiRolePackTests(unittest.TestCase):
                 self.assertIn("姓名或昵称为“小满”", prompt)
                 self.assertIn("女儿称吴所畏“吴爸”", prompt)
                 self.assertIn("女儿称池骋“池爸”", prompt)
-                self.assertIn("session fiction", prompt)
+                self.assertIn("持续生活设定", prompt)
+                self.assertIn("长期家庭记忆", prompt)
+                self.assertNotIn("session fiction", prompt)
                 self.assertIn("非浪漫、非性化的家庭关系", prompt)
                 self.assertIn("不得凭空决定女儿没有表达的经历", prompt)
 
@@ -198,7 +207,57 @@ class NixiRolePackTests(unittest.TestCase):
         self.assertIn("逼问式越界施压", chi)
         self.assertIn("不能两个人都贬损", duo)
         self.assertIn("不得让一方知道另一方没说出口的计划", duo)
+        self.assertIn("双人模式只能读取家庭共享记忆", duo)
         self.assertNotIn("伤害与照顾同源", duo)
+
+    def test_life_continues_after_initial_stage_without_source_audit_speech(self):
+        prompt = self.resolve("wu", audience="daughter")
+        self.assertIn("不是日历停止线", prompt)
+        self.assertIn("日期经过也不能擅自升级为已经完成", prompt)
+        self.assertIn("三亚？咱什么时候去的？", prompt)
+        self.assertIn("不得出现“原作没写”", prompt)
+
+    def test_dynamic_datetime_is_refreshed_when_dialogue_is_built(self):
+        dialogue = Dialogue()
+        dialogue.put(
+            Message(
+                role="system",
+                content=(
+                    "现在={{current_datetime}}；日期={{current_date}}；"
+                    "星期={{current_weekday}}；时区={{current_timezone}}"
+                ),
+            )
+        )
+        rendered = dialogue.get_llm_dialogue_with_memory()[0]["content"]
+        self.assertNotIn("{{current_", rendered)
+        self.assertRegex(rendered, r"现在=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}")
+        self.assertRegex(rendered, r"星期=星期[一二三四五六日]")
+
+    def test_output_guard_blocks_backstage_phrases_even_across_chunks(self):
+        exact_variants = tuple(
+            f"前一句。{phrase}，后一句。"
+            for phrase in forbidden_roleplay_phrases()
+        )
+        regex_variants = (
+            "原作没写，所以证据不足，也无法从原文判断。",
+            "这件事原著中并未交代，现有资料不够。",
+            "按照这部小说，我不能从剧情判断。",
+            "小说里没有说明这件事，我作为一个AI只能参考人物档案。",
+        )
+        for original in exact_variants + regex_variants:
+            with self.subTest(original=original):
+                guard = NixiStreamingOutputGuard(True)
+                pieces = [guard.feed(char) for char in original]
+                pieces.append(guard.flush())
+                spoken = "".join(pieces)
+                self.assertTrue(spoken)
+                for phrase in forbidden_roleplay_phrases():
+                    self.assertNotIn(phrase, spoken)
+                self.assertNotRegex(
+                    spoken,
+                    r"(?:原作|原著|原文|剧情|设定|资料).{0,4}(?:没|没有|并未|判断)",
+                )
+                self.assertEqual(spoken, sanitize_nixi_roleplay_output(original))
 
     def test_manifest_hash_mismatch_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -250,11 +309,16 @@ class NixiRolePackTests(unittest.TestCase):
     def test_checked_in_manifest_matches_every_runtime_file(self):
         manifest = json.loads((NIXI_ROOT / "manifest.json").read_text(encoding="utf-8"))
         self.assertFalse(manifest["build_properties"]["runtime_requires_authoring_skill"])
-        self.assertFalse(manifest["build_properties"]["runtime_writes"])
-        self.assertEqual(manifest["version"], "1.1.0")
+        self.assertEqual(
+            manifest["build_properties"]["runtime_writes"],
+            "optional_structured_memory_under_data_dir",
+        )
+        self.assertEqual(manifest["version"], "1.2.0")
+        pack = json.loads((NIXI_ROOT / "pack.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["version"], pack["version"])
         self.assertEqual(
             manifest["build_properties"]["daughter_profile"],
-            "manager_editable_session_fiction",
+            "manager_editable_continuing_family_life",
         )
         self.assertEqual(
             manifest["build_properties"]["duo_audio"],

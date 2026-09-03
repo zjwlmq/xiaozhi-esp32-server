@@ -354,6 +354,14 @@ Memory:
     # 如果这里不填，则会默认使用selected_module.LLM的模型作为意图识别的思考模型
     # 如果你的不想使用selected_module.LLM记忆存储，这里最好使用独立的LLM作为意图识别，例如使用免费的ChatGLMLLM
     llm: ChatGLMLLM
+  nixi_life:
+    # 《逆袭》持续生活记忆：按账号共享家庭时间线，文件只保存在 data/ 下。
+    # 人物提出的安排先记为待确认，只有用户确认才会成为已发生的经历。
+    type: nixi_life
+    llm: ""
+    storage_dir: data/nixi_life_memory
+    timezone: Asia/Shanghai
+    max_context_records: 60
 
 ASR:
   FunASR:

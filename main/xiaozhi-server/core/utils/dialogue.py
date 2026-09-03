@@ -106,10 +106,32 @@ class Dialogue:
         if system_message:
             full_prompt = system_message.content
 
-            # 替换时间占位符
+            # 每一轮重新计算时间。连接可能跨过午夜，不能把建连时的日期继续
+            # 当成“今天”。角色包使用完整时间块，普通提示仍兼容旧占位符。
+            now = datetime.now().astimezone()
             full_prompt = full_prompt.replace(
-                "{{current_time}}", datetime.now().strftime("%H:%M")
+                "{{current_time}}", now.strftime("%H:%M")
             )
+            full_prompt = full_prompt.replace(
+                "{{current_datetime}}", now.strftime("%Y-%m-%d %H:%M:%S")
+            )
+            full_prompt = full_prompt.replace(
+                "{{current_date}}", now.strftime("%Y-%m-%d")
+            )
+            weekdays = (
+                "星期一",
+                "星期二",
+                "星期三",
+                "星期四",
+                "星期五",
+                "星期六",
+                "星期日",
+            )
+            full_prompt = full_prompt.replace(
+                "{{current_weekday}}", weekdays[now.weekday()]
+            )
+            timezone_name = now.tzname() or str(now.utcoffset() or "本地时区")
+            full_prompt = full_prompt.replace("{{current_timezone}}", timezone_name)
 
             # 填充记忆
             if memory_str is not None:

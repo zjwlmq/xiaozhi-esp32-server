@@ -45,6 +45,11 @@ from core.utils.prompt_manager import PromptManager
 from core.utils.voiceprint_provider import VoiceprintProvider
 from core.utils.util import get_system_error_response
 from core.utils import textUtils
+from core.utils.nixi_roleplay_guard import (
+    NixiStreamingOutputGuard,
+    is_nixi_roleplay_prompt,
+    sanitize_nixi_roleplay_output,
+)
 
 
 TAG = __name__
@@ -889,6 +894,8 @@ class ConnectionHandler:
             self.config["voiceprint"] = private_config["voiceprint"]
         if private_config.get("summaryMemory", None) is not None:
             self.config["summaryMemory"] = private_config["summaryMemory"]
+        if private_config.get("nixi_life_context", None) is not None:
+            self.config["nixi_life_context"] = private_config["nixi_life_context"]
         if private_config.get("device_max_output_size", None) is not None:
             self.max_output_size = int(private_config["device_max_output_size"])
         if private_config.get("chat_history_conf", None) is not None:
@@ -944,6 +951,7 @@ class ConnectionHandler:
             llm=self.llm,
             summary_memory=self.config.get("summaryMemory", None),
             save_to_file=not self.read_config_from_api,
+            nixi_life_context=self.config.get("nixi_life_context", None),
         )
 
         # 获取记忆总结配置
@@ -955,7 +963,7 @@ class ConnectionHandler:
         if memory_type == "nomem" or memory_type == "mem_report_only":
             return
         # 使用 mem_local_short 模式
-        elif memory_type == "mem_local_short":
+        elif memory_type == "mem_local_short" or memory_type == "nixi_life":
             memory_llm_name = memory_config[self.config["selected_module"]["Memory"]][
                 "llm"
             ]
@@ -1030,6 +1038,11 @@ class ConnectionHandler:
         self.prompt = prompt
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
+
+    def _guard_roleplay_text(self, text):
+        if is_nixi_roleplay_prompt(self.prompt):
+            return sanitize_nixi_roleplay_output(text)
+        return text
 
     def chat(self, query, depth=0):
         # 保存当前任务的sentence_id到局部变量，避免被新任务覆盖
@@ -1131,6 +1144,9 @@ class ConnectionHandler:
         tool_calls_list = []  # 格式: [{"id": "", "name": "", "arguments": ""}]
         content_arguments = ""
         emotion_flag = True
+        nixi_output_guard = NixiStreamingOutputGuard(
+            is_nixi_roleplay_prompt(self.prompt)
+        )
         try:
             for response in llm_responses:
                 if self.client_abort:
@@ -1156,6 +1172,10 @@ class ConnectionHandler:
                     _DA_STREAM_BUFFER = 5
                     for tc in tool_calls_list:
                         if tc["name"] == "direct_answer" and tc.get("arguments"):
+                            # Nixi 输出必须先经过完整文本检查，不能让被拆到两个
+                            # provider chunk 的幕后措辞抢先进入 TTS。
+                            if nixi_output_guard.enabled:
+                                continue
                             da_text = self._extract_direct_answer_response(tc["arguments"])
                             sent_len = tc.get("_da_sent", 0)
                             if da_text and len(da_text) > sent_len:
@@ -1188,15 +1208,17 @@ class ConnectionHandler:
 
                 if content is not None and len(content) > 0:
                     if not tool_call_flag:
-                        response_message.append(content)
-                        self.tts.tts_text_queue.put(
-                            TTSMessageDTO(
-                                sentence_id=current_sentence_id,
-                                sentence_type=SentenceType.MIDDLE,
-                                content_type=ContentType.TEXT,
-                                content_detail=content,
+                        guarded_content = nixi_output_guard.feed(content)
+                        if guarded_content:
+                            response_message.append(guarded_content)
+                            self.tts.tts_text_queue.put(
+                                TTSMessageDTO(
+                                    sentence_id=current_sentence_id,
+                                    sentence_type=SentenceType.MIDDLE,
+                                    content_type=ContentType.TEXT,
+                                    content_detail=guarded_content,
+                                )
                             )
-                        )
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"LLM stream processing error: {e}")
             self.tts.tts_text_queue.put(
@@ -1216,6 +1238,17 @@ class ConnectionHandler:
                     )
                 )
             return
+        guarded_tail = nixi_output_guard.flush()
+        if guarded_tail and not tool_call_flag:
+            response_message.append(guarded_tail)
+            self.tts.tts_text_queue.put(
+                TTSMessageDTO(
+                    sentence_id=current_sentence_id,
+                    sentence_type=SentenceType.MIDDLE,
+                    content_type=ContentType.TEXT,
+                    content_detail=guarded_tail,
+                )
+            )
         # 处理function call
         if tool_call_flag:
             bHasError = False
@@ -1258,8 +1291,13 @@ class ConnectionHandler:
                     for tc in direct_answer_calls:
                         da_response = self._extract_direct_answer_response(tc.get("arguments", "{}"))
                         if da_response:
+                            da_response = self._guard_roleplay_text(da_response)
                             # 刷新流式缓冲区中未发送的部分
-                            sent_len = tc.get("_da_sent", 0)
+                            sent_len = (
+                                0
+                                if nixi_output_guard.enabled
+                                else tc.get("_da_sent", 0)
+                            )
                             remaining = da_response[sent_len:]
                             if remaining:
                                 remaining = self._clean_response_garbage(remaining)
@@ -1384,6 +1422,7 @@ class ConnectionHandler:
                 Action.ERROR,
             ]:
                 text = result.response if result.response else result.result
+                text = self._guard_roleplay_text(text)
                 if streamed_text and text in streamed_text:
                     self.logger.bind(tag=TAG).debug(
                         f"Skipping duplicate TTS for tool {tool_call_data['name']}, already streamed"
@@ -1443,7 +1482,8 @@ class ConnectionHandler:
                 if resp:
                     response_parts.append(resp)
             if response_parts:
-                self.dialogue.put(Message(role="assistant", content="，".join(response_parts)))
+                recorded_response = self._guard_roleplay_text("，".join(response_parts))
+                self.dialogue.put(Message(role="assistant", content=recorded_response))
 
         if need_llm_tools:
             all_tool_calls = [

@@ -1,6 +1,7 @@
 package xiaozhi.modules.agent.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -79,6 +80,14 @@ class NixiRolepackAccessServiceTest {
         assertEquals(NixiRolepackAccessService.DENIED_PROMPT,
                 service.enforceRuntimePrompt(2L, directive));
         assertEquals("ordinary prompt", service.enforceRuntimePrompt(2L, "ordinary prompt"));
+    }
+
+    @Test
+    void extractsRoleModeOnlyFromTheDirectiveFirstLine() {
+        assertEquals("wu", service.getNixiMode("@rolepack nixi/wu\ncanon=novel"));
+        assertEquals("chi", service.getNixiMode("\n@rolepack nixi/chi\naudience=daughter"));
+        assertEquals("duo", service.getNixiMode("@rolepack nixi/duo"));
+        assertNull(service.getNixiMode("ordinary prompt\n@rolepack nixi/wu"));
     }
 
     @Test
