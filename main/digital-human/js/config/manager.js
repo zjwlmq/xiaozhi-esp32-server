@@ -3,6 +3,44 @@
 // 默认唤醒词列表
 export const DEFAULT_WAKE_WORDS = '你好小智\n你好小志\n小爱同学\n你好小鑫\n你好小新\n小美同学\n小龙小龙\n喵喵同学\n小滨小滨\n小冰小冰\n嘿你好呀';
 
+const STANDALONE_RUNTIME_PORT = '8006';
+const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
+// python start.py 提供的本地运行时同时包含唤醒词桥；随智控台发布的
+// /digital-human/ 只需要浏览器端麦克风和正式 OTA/WebSocket 链路。
+export function isStandaloneRuntime(locationLike = window.location) {
+    const hostname = String(locationLike?.hostname || '').toLowerCase();
+    const port = String(locationLike?.port || '');
+    return LOCAL_HOSTNAMES.has(hostname) && port === STANDALONE_RUNTIME_PORT;
+}
+
+export function getDefaultOtaUrl(locationLike = window.location) {
+    if (isStandaloneRuntime(locationLike)) {
+        return 'http://127.0.0.1:8002/xiaozhi/ota/';
+    }
+
+    const protocol = String(locationLike?.protocol || '');
+    const origin = String(locationLike?.origin || '');
+    if ((protocol === 'http:' || protocol === 'https:') && origin) {
+        return new URL('/xiaozhi/ota/', origin).toString();
+    }
+
+    return 'http://127.0.0.1:8002/xiaozhi/ota/';
+}
+
+export function getDefaultWakewordEnabled(locationLike = window.location) {
+    return isStandaloneRuntime(locationLike) ? 'true' : 'false';
+}
+
+export function getDefaultWakewordBridgeUrl(locationLike = window.location) {
+    if (!isStandaloneRuntime(locationLike)) {
+        return '';
+    }
+
+    const protocol = locationLike.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${locationLike.host}/wakeword-ws`;
+}
+
 // 生成随机MAC地址
 function generateRandomMac() {
     const hexDigits = '0123456789ABCDEF';
@@ -46,18 +84,20 @@ export function loadConfig() {
     }
 
     const savedOtaUrl = localStorage.getItem('xz_tester_otaUrl');
-    if (savedOtaUrl) {
-        otaUrlInput.value = savedOtaUrl;
-    }
+    otaUrlInput.value = savedOtaUrl || getDefaultOtaUrl();
 
     const savedWakewordWsUrl = localStorage.getItem('xz_tester_wakewordWsUrl');
-    if (savedWakewordWsUrl !== null && wakewordWsUrlInput) {
-        wakewordWsUrlInput.value = savedWakewordWsUrl;
+    if (wakewordWsUrlInput) {
+        wakewordWsUrlInput.value = savedWakewordWsUrl !== null
+            ? savedWakewordWsUrl
+            : getDefaultWakewordBridgeUrl();
     }
 
     const savedWakewordEnabled = localStorage.getItem('xz_tester_wakewordEnabled');
-    if (savedWakewordEnabled !== null && wakewordEnabledInput) {
-        wakewordEnabledInput.value = savedWakewordEnabled;
+    if (wakewordEnabledInput) {
+        wakewordEnabledInput.value = savedWakewordEnabled !== null
+            ? savedWakewordEnabled
+            : getDefaultWakewordEnabled();
     }
 
     const savedWakewordList = localStorage.getItem('xz_tester_wakewordList');

@@ -33,6 +33,7 @@
 - [版本选择说明](./CUSTOM_VERSIONS.md)
 - [Anthropic Messages 配置说明](./docs/anthropic-messages.md)
 - [《逆袭》吴所畏／池骋语音角色包](./docs/nixi-rolepack.md)
+- [服务器无硬件数字人测试台](./docs/digital-human-server-test.md)
 - [v1.0.0-rc.7 发布说明](./docs/releases/volc-anthropic-v1.0.0-rc.7.md)
 - [CentOS Stream 9 部署](./deploy/centos-stream-9/README.md)
 - [Ubuntu 部署](./deploy/ubuntu/README.md)

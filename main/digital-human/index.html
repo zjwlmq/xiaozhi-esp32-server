@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小智数字人页面</title>
+    <title>小智无硬件测试台</title>
     <link rel="stylesheet" href="css/index.css?v=0206">
     <script>
         // 检测是否使用file://协议打开
@@ -179,8 +179,8 @@
                     <div class="connection-controls">
                         <div class="input-group">
                             <label for="otaUrl">OTA服务器地址:</label>
-                            <input type="text" id="otaUrl" value="http://127.0.0.1:8002/xiaozhi/ota/"
-                                placeholder="OTA服务器地址，如：http://127.0.0.1:8002/xiaozhi/ota/" />
+                            <input type="text" id="otaUrl" value=""
+                                placeholder="会自动使用当前站点的 /xiaozhi/ota/" />
                         </div>
                         <div class="input-group">
                             <label for="serverUrl">WebSocket服务器地址:</label>
@@ -202,7 +202,7 @@
                                     <label for="wakewordEnabled">启用本地唤醒词:</label>
                                     <select id="wakewordEnabled" class="model-select">
                                         <option value="true">启用</option>
-                                        <option value="false">禁用</option>
+                                        <option value="false" selected>禁用</option>
                                     </select>
                                 </div>
                             </div>

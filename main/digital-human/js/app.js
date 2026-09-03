@@ -44,10 +44,17 @@ class App {
         await this.audioPlayer.start();
         // 初始化MCP工具
         initMcpTools();
-        // 初始化本地唤醒事件监听
-        startWakewordBridgeListener();
-        // 检查麦克风可用性
-        await this.checkMicrophoneAvailability();
+        // python start.py 的本地运行时带唤醒词桥；随服务器发布的静态测试台
+        // 默认不连接访问者电脑上的 127.0.0.1，也不会产生无限重连噪声。
+        const wakewordEnabled = document.getElementById('wakewordEnabled')?.value === 'true';
+        if (wakewordEnabled) {
+            startWakewordBridgeListener();
+        } else {
+            log('本地唤醒词桥已禁用；拨号和浏览器录音仍可用', 'info');
+        }
+        // 麦克风权限提示可能一直等待用户选择，不能因此阻塞模型和文字界面。
+        // 检测完成后会自行更新录音按钮状态。
+        void this.checkMicrophoneAvailability();
         // 检查摄像头可用性
         this.checkCameraAvailability();
         // 初始化Live2D

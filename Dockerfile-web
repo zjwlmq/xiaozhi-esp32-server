@@ -38,6 +38,14 @@ COPY docs/docker/nginx.conf /etc/nginx/nginx.conf
 # 复制前端构建产物
 COPY --from=web-builder /app/dist /usr/share/nginx/html
 
+# 复制无硬件数字人测试台。它由同一个 Nginx 在 /digital-human/ 下提供，
+# 浏览器直接连接正式 OTA/WebSocket 服务，不需要服务器音频设备。
+COPY main/digital-human/index.html main/digital-human/favicon.ico /usr/share/nginx/html/digital-human/
+COPY main/digital-human/css /usr/share/nginx/html/digital-human/css
+COPY main/digital-human/images /usr/share/nginx/html/digital-human/images
+COPY main/digital-human/js /usr/share/nginx/html/digital-human/js
+COPY main/digital-human/resources /usr/share/nginx/html/digital-human/resources
+
 # 复制Java后端JAR包
 COPY --from=api-builder /app/target/xiaozhi-esp32-api.jar /app/xiaozhi-esp32-api.jar
 
