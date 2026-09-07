@@ -1,6 +1,7 @@
 package xiaozhi.modules.model.controller;
 
 import java.util.List;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -138,6 +139,15 @@ public class ModelController {
         ModelConfigEntity item = modelConfigService.selectById(id);
         ModelConfigDTO modelConfigDTO = ConvertUtils.sourceToTarget(item, ModelConfigDTO.class);
         return new Result<ModelConfigDTO>().ok(modelConfigDTO);
+    }
+
+    @GetMapping("/{id}/editor")
+    @Operation(summary = "管理员编辑模型配置（含明文API Key）")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<ModelConfigDTO> getModelForEditor(@PathVariable String id, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store, private");
+        response.setHeader("Pragma", "no-cache");
+        return new Result<ModelConfigDTO>().ok(modelConfigService.getModelForEditor(id));
     }
 
     @PutMapping("/enable/{id}/{status}")

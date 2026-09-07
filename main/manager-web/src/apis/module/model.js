@@ -218,6 +218,25 @@ export default {
     request.send();
   },
   // 获取单个模型配置
+  // 管理员编辑专用：仅此接口返回明文 API Key，不存入浏览器持久化存储。
+  getModelConfigForEdit(id, callback, onFailure) {
+    RequestService.sendRequest()
+      .url(`${getServiceUrl()}/models/${id}/editor`)
+      .method('GET')
+      .success((res) => {
+        RequestService.clearRequestTime();
+        callback(res);
+      })
+      .fail(() => {
+        RequestService.clearRequestTime();
+        if (onFailure) onFailure();
+      })
+      .networkFail(() => {
+        RequestService.clearRequestTime();
+        if (onFailure) onFailure();
+      })
+      .send();
+  },
   getModelConfig(id, callback) {
     RequestService.sendRequest()
       .url(`${getServiceUrl()}/models/${id}`)

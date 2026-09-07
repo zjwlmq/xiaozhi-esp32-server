@@ -81,13 +81,13 @@
                 :cell-class-name="selectionCellClassName"
               ></el-table-column>
               <el-table-column
-                :label="$t('modelConfig.modelId')"
-                prop="id"
+                :label="$t('modelConfig.modelName')"
+                prop="modelName"
                 align="center"
               ></el-table-column>
               <el-table-column
-                :label="$t('modelConfig.modelName')"
-                prop="modelName"
+                :label="$t('modelConfigDialog.modelCode')"
+                prop="modelCode"
                 align="center"
               ></el-table-column>
               <el-table-column :label="$t('modelConfig.provider')" align="center">

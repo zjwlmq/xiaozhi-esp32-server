@@ -23,6 +23,9 @@ public interface ModelConfigService extends BaseService<ModelConfigEntity> {
 
     ModelConfigDTO edit(String modelType, String provideCode, String id, ModelConfigBodyDTO modelConfigBodyDTO);
 
+    /** 管理员编辑专用；返回明文 API Key，其他敏感字段仍脱敏。 */
+    ModelConfigDTO getModelForEditor(String id);
+
     void delete(String id);
 
     /**

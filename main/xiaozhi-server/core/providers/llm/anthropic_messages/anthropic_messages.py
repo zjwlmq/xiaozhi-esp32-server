@@ -15,7 +15,6 @@ import httpx
 
 from config.logger import setup_logging
 from core.providers.llm.base import LLMProviderBase
-from core.utils.util import check_model_key
 
 from .protocol import (
     AnthropicProtocolError,
@@ -189,6 +188,7 @@ class LLMProvider(LLMProviderBase):
 
     def __init__(self, config: Dict[str, Any]):
         self.model_name = str(config.get("model_name") or "").strip()
+        self.display_name = str(config.get("_model_display_name") or self.model_name or "未命名模型")
         self.api_key = str(config.get("api_key") or "").strip()
         self.url = normalize_messages_url(
             config.get("base_url") or config.get("url") or ""
@@ -213,9 +213,16 @@ class LLMProvider(LLMProviderBase):
         self.top_k = _optional_number(config, "top_k", int)
         self.tool_choice = _build_tool_choice(config)
 
-        model_key_msg = check_model_key("LLM", self.api_key)
-        if model_key_msg:
-            logger.bind(tag=TAG).error(model_key_msg)
+        if (not self.api_key
+                or any(ord(char) < 33 or ord(char) > 126 for char in self.api_key)
+                or self.api_key.lower().startswith(("your_", "your-", "<your"))
+                or "****" in self.api_key):
+            message = (
+                f"配置错误: LLM「{self.display_name}」的 API Key 未填写或格式无效，"
+                "请在智控台「模型配置 → 语言模型」填写实际密钥。"
+            )
+            logger.bind(tag=TAG).error(message)
+            raise ValueError(message)
 
         self.headers = build_headers(
             api_key=self.api_key,

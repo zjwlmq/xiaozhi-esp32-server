@@ -561,6 +561,12 @@ public class ConfigServiceImpl implements ConfigService {
                     }
                 }
             }
+            if (model.getConfigJson() != null) {
+                // 展示名称与用于绑定的ID分离；只增加响应元数据，不写回数据库/缓存配置。
+                Map<String, Object> runtimeConfig = new HashMap<>(model.getConfigJson());
+                runtimeConfig.put("_model_display_name", model.getModelName());
+                typeConfig.put(model.getId(), runtimeConfig);
+            }
             result.put(modelTypes[i], typeConfig);
 
             selectedModule.put(modelTypes[i], model.getId());

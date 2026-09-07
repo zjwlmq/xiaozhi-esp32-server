@@ -1,6 +1,6 @@
 <template>
   <CustomDialog
-    :title="$t('modelConfigDialog.editModel')"
+    :title="title"
     :visible.sync="dialogVisible"
     width="57%"
     class="model-edit-dialog"
@@ -87,14 +87,18 @@
                 :value="option.value" />
             </el-select>
 
-            <el-input v-else v-model="form.configJson[field.prop]" :placeholder="field.placeholder" :type="field.type"
-              :show-password="field.type === 'password'" @focus="
-                isSensitiveField(field.prop)
+            <el-input v-else v-model="form.configJson[field.prop]" :placeholder="field.placeholder" :type="apiKeyInputType(field)"
+              :show-password="field.type === 'password' && field.prop !== 'api_key'" autocomplete="off" @focus="
+                isSensitiveField(field.prop) && field.prop !== 'api_key'
                   ? handleInputFocus(field.prop, form.configJson[field.prop])
                   : undefined
                 " @blur="
-                isSensitiveField(field.prop) ? handleInputBlur(field.prop) : undefined
+                isSensitiveField(field.prop) && field.prop !== 'api_key' ? handleInputBlur(field.prop) : undefined
                 "></el-input>
+            <div v-if="field.prop === 'api_key'" class="credential-status"
+              :class="{ 'credential-status--warning': credentialState(form.configJson[field.prop]) !== 'filled' }">
+              {{ $t('modelConfigDialog.credential_' + credentialState(form.configJson[field.prop])) }}
+            </div>
           </el-form-item>
         </div>
       </template>
@@ -173,6 +177,7 @@
 <script>
 import CustomDialog from './CustomDialog.vue';
 import Api from "@/apis/api";
+import { apiKeyInputType, credentialState, normalizeCredential } from '@/utils/modelCredentials';
 
 export default {
   name: "ModelEditDialog",
@@ -192,6 +197,8 @@ export default {
       providers: [],
       providersLoaded: false,
       saving: false,
+      modelLoaded: false,
+      modelRequestSequence: 0,
       allProvidersData: null,
       pendingProviderType: null,
       pendingModelData: null,
@@ -233,9 +240,11 @@ export default {
   },
   computed: {
     title() {
-      return this.modelData.duplicateMode
+      const action = this.modelData.duplicateMode
         ? this.$t("modelConfigDialog.duplicateModel")
         : this.$t("modelConfigDialog.editModel");
+      const name = this.form.modelName || this.modelData.modelName;
+      return name ? `${action} · ${name}` : action;
     },
     chunkedCallInfoFields() {
       const chunkSize = 2;
@@ -269,7 +278,10 @@ export default {
     },
   },
   methods: {
+    apiKeyInputType,
+    credentialState,
     handleOpen() {
+      this.resetForm();
       this.loadProviders();
       if (this.modelData.id) {
         this.loadModelData();
@@ -278,12 +290,12 @@ export default {
     handleClose() {
       this.saving = false;
       this.probeDialogVisible = false;
-      // 处理关闭弹窗闪动问题
-      setTimeout(() => {
-        this.resetForm();
-      }, 200)
+      // 明文凭据只留在当前编辑会话；关闭立即清空，旧请求不能回填。
+      this.resetForm();
     },
     resetForm() {
+      this.modelLoaded = false;
+      this.modelRequestSequence += 1;
       this.form = {
         id: "",
         modelType: "",
@@ -297,6 +309,9 @@ export default {
         configJson: {},
       };
       this.fieldJsonMap = {};
+      this.originalValues = {};
+      this.pendingModelData = null;
+      this.pendingProviderType = null;
       this.upstreamModels = [];
       this.probeModel = "";
       this.probePrompt = "hi";
@@ -312,7 +327,10 @@ export default {
     },
     loadModelData() {
       if (this.modelData.id) {
-        Api.model.getModelConfig(this.modelData.id, ({ data }) => {
+        const requestId = ++this.modelRequestSequence;
+        const method = this.modelData.duplicateMode ? 'getModelConfig' : 'getModelConfigForEdit';
+        Api.model[method](this.modelData.id, ({ data }) => {
+          if (requestId !== this.modelRequestSequence || !this.dialogVisible) return;
           if (data.code === 0 && data.data) {
             let model = data.data;
 
@@ -326,8 +344,7 @@ export default {
               if (model.configJson) {
                 Object.keys(model.configJson).forEach((key) => {
                   if (this.isSensitiveField(key) && model.configJson[key]) {
-                    const sensitiveName = this.getSensitiveFieldName(key);
-                    model.configJson[key] = `你的${sensitiveName}`;
+                    model.configJson[key] = '';
                   }
                 });
               }
@@ -341,10 +358,15 @@ export default {
               this.loadProviders();
             }
           }
+        }, () => {
+          if (requestId !== this.modelRequestSequence || !this.dialogVisible) return;
+          this.$message.error(this.$t('modelConfigDialog.editorLoadFailed'));
+          this.dialogVisible = false;
         });
       }
     },
     handleSave() {
+      if (!this.validateApiKey()) return;
       this.saving = true; // 开始保存加载
 
       // 处理所有JSON字段
@@ -388,6 +410,20 @@ export default {
         }
       });
     },
+    validateApiKey() {
+      if (!this.modelLoaded) {
+        this.$message.error(this.$t('modelConfigDialog.editorLoadFailed'));
+        return false;
+      }
+      if (!Object.prototype.hasOwnProperty.call(this.form.configJson, 'api_key')) return true;
+      const state = credentialState(this.form.configJson.api_key);
+      const required = this.form.configJson.type === 'anthropic_messages' && this.form.isEnabled === 1;
+      if (['placeholder', 'masked', 'invalid'].includes(state) || (required && state === 'empty')) {
+        this.$message.error(this.$t('modelConfigDialog.apiKeyRequired', { name: this.form.modelName || this.$t('modelConfig.unknown') }));
+        return false;
+      }
+      return true;
+    },
     probePayload() {
       this.syncJsonFields();
       return {
@@ -402,6 +438,7 @@ export default {
       this.$set(this.form.configJson, "model_name", value);
     },
     fetchUpstreamModels(openDialog) {
+      if (!this.validateApiKey()) return;
       this.probeDialogVisible = openDialog || this.probeDialogVisible;
       this.modelsLoading = true;
       this.probeState = "";
@@ -426,6 +463,7 @@ export default {
       this.$nextTick(() => this.testUpstreamConnection());
     },
     testUpstreamConnection() {
+      if (!this.validateApiKey()) return;
       this.probeDialogVisible = true;
       this.probeModel = this.probeModel || this.form.configJson.model_name || "";
       if (!this.probeModel) {
@@ -503,6 +541,8 @@ export default {
       }
     },
     processModelData(model) {
+      this.originalValues = {};
+      this.fieldJsonMap = {};
       let configJson = model.configJson || {};
       this.dynamicCallInfoFields.forEach((field) => {
         if (!configJson.hasOwnProperty(field.prop)) {
@@ -515,7 +555,11 @@ export default {
           );
           configJson[field.prop] = this.ensureObject(configJson[field.prop]);
         } else if (typeof configJson[field.prop] !== "string") {
-          configJson[field.prop] = String(configJson[field.prop]);
+          configJson[field.prop] = this.isSensitiveField(field.prop) && configJson[field.prop] == null
+            ? '' : String(configJson[field.prop]);
+        }
+        if (this.isSensitiveField(field.prop)) {
+          configJson[field.prop] = normalizeCredential(configJson[field.prop]);
         }
       });
 
@@ -531,6 +575,7 @@ export default {
         sort: Number(model.sort) || 0,
         configJson: { ...configJson },
       };
+      this.modelLoaded = true;
     },
     handleJsonChange(field, value) {
       const parsed = this.validateJson(value);
@@ -576,27 +621,6 @@ export default {
       return this.sensitive_keys.includes(lowerFieldName);
     },
 
-    // 获取敏感字段对应的中文名称
-    getSensitiveFieldName(fieldName) {
-      const keyMap = {
-        api_key: "API密钥",
-        personal_access_token: "个人访问令牌",
-        access_token: "访问令牌",
-        token: "令牌",
-        secret: "密钥",
-        access_key_id: "Access Key ID",
-        access_key_secret: "访问密钥",
-        secret_key: "密钥",
-      };
-
-      for (const [key, value] of Object.entries(keyMap)) {
-        if (fieldName.toLowerCase().includes(key)) {
-          return value;
-        }
-      }
-      return "敏感信息";
-    },
-
     // 处理input聚焦事件
     handleInputFocus(field, value) {
       // 如果值包含星号，清空显示
@@ -613,12 +637,9 @@ export default {
       if (this.isSensitiveField(field)) {
         // 如果值为空，恢复掩码值
         if (!this.form.configJson[field] || this.form.configJson[field].trim() === "") {
-          // 如果有原始值，则恢复原始值；否则设置为掩码提示
+          // 仅恢复已读取的掩码；没有原值时保持为空，绝不生成示例密钥。
           if (this.originalValues[field]) {
             this.$set(this.form.configJson, field, this.originalValues[field]);
-          } else {
-            const sensitiveName = this.getSensitiveFieldName(field);
-            this.$set(this.form.configJson, field, `你的${sensitiveName}`);
           }
           // 清除临时存储的原始值
           this.$delete(this.originalValues, field);
@@ -715,6 +736,15 @@ export default {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+
+  .credential-status {
+    color: #4b6b58;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 4px;
+
+    &--warning { color: #b35c00; }
   }
 
   .upstream-tools__title {

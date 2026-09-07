@@ -82,7 +82,11 @@
                 :value="option.value" />
             </el-select>
             <el-input v-else v-model="formData.configJson[field.prop]" :placeholder="field.placeholder"
-              :type="field.type || 'text'" class="custom-input-bg" :show-password="field.type === 'password'" />
+              :type="apiKeyInputType(field)" class="custom-input-bg" autocomplete="off"
+              :show-password="field.type === 'password' && field.prop !== 'api_key'" />
+            <div v-if="field.prop === 'api_key'" class="credential-status">
+              {{ $t('modelConfigDialog.credential_' + credentialState(formData.configJson[field.prop])) }}
+            </div>
           </el-form-item>
         </div>
       </el-form>
@@ -93,6 +97,7 @@
 <script>
 import Api from '@/apis/api';
 import CustomDialog from './CustomDialog.vue';
+import { apiKeyInputType, credentialState, normalizeCredential } from '@/utils/modelCredentials';
 export default {
   name: 'AddModelDialog',
   components: {
@@ -153,6 +158,8 @@ export default {
     }
   },
   methods: {
+    apiKeyInputType,
+    credentialState,
     loadProviders() {
       if (this.providersLoaded)
         return
@@ -176,7 +183,7 @@ export default {
     initConfigJson() {
       const defaultConfig = {};
       this.providerFields.forEach(field => {
-        defaultConfig[field.prop] = field.defaultValue;
+        defaultConfig[field.prop] = field.prop === 'api_key' ? normalizeCredential(field.defaultValue) : field.defaultValue;
       });
       this.formData.configJson = { ...defaultConfig };
     },
@@ -191,11 +198,17 @@ export default {
       this.providerFields.forEach(field => {
         newConfig[field.prop] = Object.prototype.hasOwnProperty.call(this.formData.configJson, field.prop)
           ? this.formData.configJson[field.prop]
-          : field.defaultValue;
+          : (field.prop === 'api_key' ? normalizeCredential(field.defaultValue) : field.defaultValue);
       });
       this.formData.configJson = newConfig;
     },
     confirm() {
+      const state = credentialState(this.formData.configJson.api_key);
+      const required = this.formData.supplier === 'anthropic_messages' && this.formData.isEnabled;
+      if (['placeholder', 'masked', 'invalid'].includes(state) || (required && state === 'empty')) {
+        this.$message.error(this.$t('modelConfigDialog.apiKeyRequired', { name: this.formData.modelName || this.$t('modelConfig.unknown') }));
+        return;
+      }
       this.saving = true;
 
       // 校验模型ID不能为纯文字或空格
@@ -307,6 +320,12 @@ export default {
   @include scrollbar-style;
 }
 .add-model-dialog {
+  .credential-status {
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
   .section-header {
     display: flex;
     justify-content: space-between;

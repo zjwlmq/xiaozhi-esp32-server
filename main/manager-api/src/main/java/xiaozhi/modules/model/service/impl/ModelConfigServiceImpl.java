@@ -121,6 +121,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
 
         // 5. 准备更新实体并处理敏感数据
         ModelConfigEntity modelConfigEntity = prepareUpdateEntity(modelConfigBodyDTO, originalEntity, modelType, id);
+        validateApiKey(modelConfigEntity);
 
         // 6. 执行数据库更新
         modelConfigDao.updateById(modelConfigEntity);
@@ -139,10 +140,35 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         validateModelProvider(modelType, provideCode);
 
         ModelConfigEntity modelConfigEntity = prepareAddEntity(modelConfigBodyDTO, modelType);
+        validateApiKey(modelConfigEntity);
 
         modelConfigDao.insert(modelConfigEntity);
 
         return buildResponseDTO(modelConfigEntity);
+    }
+
+    @Override
+    public ModelConfigDTO getModelForEditor(String id) {
+        ModelConfigEntity entity = getOriginalConfigFromDb(id);
+        ModelConfigDTO dto = buildResponseDTO(entity);
+        if (entity.getConfigJson() != null && entity.getConfigJson().containsKey("api_key")) {
+            dto.getConfigJson().set("api_key", entity.getConfigJson().get("api_key"));
+        }
+        return dto;
+    }
+
+    private void validateApiKey(ModelConfigEntity entity) {
+        JSONObject config = entity.getConfigJson();
+        if (config == null) return;
+        String key = config.getStr("api_key", "").trim();
+        boolean required = "anthropic_messages".equals(config.getStr("type"))
+                && Integer.valueOf(1).equals(entity.getIsEnabled());
+        boolean placeholder = key.matches("(?i)^(你的|请输入|请填写|your[_ -]|<your[_ -]).*");
+        boolean invalid = !key.isEmpty() && key.chars().anyMatch(c -> c < 33 || c > 126);
+        if ((required && key.isEmpty()) || placeholder || invalid || SensitiveDataUtils.isMaskedValue(key)) {
+            String name = StringUtils.defaultIfBlank(entity.getModelName(), "未命名模型");
+            throw new RenException("模型「" + name + "」的 API Key 未填写或格式无效，请填写实际密钥；不要填写占位文字。");
+        }
     }
 
     @Override

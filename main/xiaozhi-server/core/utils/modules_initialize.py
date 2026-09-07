@@ -45,7 +45,12 @@ def initialize_modules(
             llm_type,
             config["LLM"][select_llm_module],
         )
-        logger.bind(tag=TAG).info(f"初始化组件: llm成功 {select_llm_module}")
+        display_name = (
+            config["LLM"][select_llm_module].get("_model_display_name")
+            or config["LLM"][select_llm_module].get("model_name")
+            or select_llm_module
+        )
+        logger.bind(tag=TAG).info(f"初始化组件: llm成功 {display_name}")
 
     # 初始化Intent模块
     if init_intent:

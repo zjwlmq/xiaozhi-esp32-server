@@ -61,6 +61,16 @@ def _config(**overrides):
 
 
 class ProviderTests(unittest.TestCase):
+    def test_invalid_key_error_names_the_model_without_logging_the_key(self):
+        for key in ("", "你的API密钥", "sk-secret\nvalue", "sk-****", "your_api_key", "sk-秘密-value"):
+            with self.subTest(key_kind="invalid"):
+                with self.assertRaises(ValueError) as caught:
+                    LLMProvider(_config(api_key=key, _model_display_name="claude_副本"))
+                self.assertIn("claude_副本", str(caught.exception))
+                self.assertIn("模型配置", str(caught.exception))
+                if key:
+                    self.assertNotIn(key, str(caught.exception))
+
     def _provider_with_handler(self, handler, **config):
         provider = LLMProvider(_config(**config))
         provider.client.close()
