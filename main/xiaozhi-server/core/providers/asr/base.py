@@ -10,6 +10,7 @@ import asyncio
 import tempfile
 import traceback
 import threading
+from concurrent.futures import Future
 
 from abc import ABC, abstractmethod
 from config.logger import setup_logging
@@ -44,6 +45,11 @@ class ASRProviderBase(ABC):
         while not conn.stop_event.is_set():
             try:
                 message = conn.asr_audio_queue.get(timeout=1)
+                if isinstance(message, Future):
+                    # 屏障前的音频已经处理完成，再允许 listen/stop 结束识别。
+                    if message.set_running_or_notify_cancel():
+                        message.set_result(None)
+                    continue
                 future = asyncio.run_coroutine_threadsafe(
                     handleAudioMessage(conn, message),
                     conn.loop,
@@ -56,6 +62,12 @@ class ASRProviderBase(ABC):
                     f"处理ASR文本失败: {str(e)}, 类型: {type(e).__name__}, 堆栈: {traceback.format_exc()}"
                 )
                 continue
+
+    async def wait_for_audio_processed(self, conn: "ConnectionHandler"):
+        """等待此前入队的 PCM，避免停止指令先于最后几帧到达 ASR。"""
+        barrier = Future()
+        conn.asr_audio_queue.put(barrier)
+        await asyncio.wait_for(asyncio.wrap_future(barrier), timeout=30)
 
     # 接收音频
     async def receive_audio(self, conn: "ConnectionHandler", pcm_frame, audio_have_voice):

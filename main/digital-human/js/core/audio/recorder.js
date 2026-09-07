@@ -1,12 +1,21 @@
 // Audio recording module
-import { log } from '../../utils/logger.js?v=0205';
-import { initOpusEncoder } from './opus-codec.js?v=0205';
-import { getAudioPlayer } from './player.js?v=0205';
+import { log } from '../../utils/logger.js?v=0907';
+import { initOpusEncoder } from './opus-codec.js?v=0907';
+import { getAudioPlayer } from './player.js?v=0907';
 
 // Audio recorder class
 export class AudioRecorder {
     constructor() {
         this.isRecording = false;
+        this.isStarting = false;
+        this.isStopping = false;
+        this.startGeneration = 0;
+        this.stopPromise = null;
+        this.mediaStream = null;
+        this.recordingWebSocket = null;
+        this.workletContext = null;
+        this.onProcessorStopped = null;
+        this.silentGain = null;
         this.audioContext = null;
         this.analyser = null;
         this.audioProcessor = null;
@@ -27,6 +36,9 @@ export class AudioRecorder {
 
     // Set WebSocket instance
     setWebSocket(ws) {
+        if (this.websocket !== ws) {
+            void this.stop();
+        }
         this.websocket = ws;
     }
 
@@ -92,18 +104,28 @@ export class AudioRecorder {
         this.audioContext = this.getAudioContext();
         try {
             if (this.audioContext.audioWorklet) {
-                const blob = new Blob([this.getAudioProcessorCode()], { type: 'application/javascript' });
-                const url = URL.createObjectURL(blob);
-                await this.audioContext.audioWorklet.addModule(url);
-                URL.revokeObjectURL(url);
+                if (this.workletContext !== this.audioContext) {
+                    const blob = new Blob([this.getAudioProcessorCode()], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    try {
+                        await this.audioContext.audioWorklet.addModule(url);
+                        this.workletContext = this.audioContext;
+                    } finally {
+                        URL.revokeObjectURL(url);
+                    }
+                }
                 const audioProcessor = new AudioWorkletNode(this.audioContext, 'audio-recorder-processor');
                 audioProcessor.port.onmessage = (event) => {
+                    if (audioProcessor !== this.audioProcessor) return;
                     if (event.data.type === 'buffer') {
                         this.processPCMBuffer(event.data.buffer);
+                    } else if (event.data.type === 'status' && event.data.status === 'stopped') {
+                        this.onProcessorStopped?.();
                     }
                 };
                 log('使用AudioWorklet处理音频', 'success');
                 const silent = this.audioContext.createGain();
+                this.silentGain = silent;
                 silent.gain.value = 0;
                 audioProcessor.connect(silent);
                 silent.connect(this.audioContext.destination);
@@ -133,6 +155,7 @@ export class AudioRecorder {
                 this.processPCMBuffer(buffer);
             };
             const silent = this.audioContext.createGain();
+            this.silentGain = silent;
             silent.gain.value = 0;
             scriptProcessor.connect(silent);
             silent.connect(this.audioContext.destination);
@@ -146,7 +169,7 @@ export class AudioRecorder {
 
     // Process PCM buffer data
     processPCMBuffer(buffer) {
-        if (!this.isRecording) return;
+        if (!this.isRecording && !this.isStopping) return;
         const newBuffer = new Int16Array(this.pcmDataBuffer.length + buffer.length);
         newBuffer.set(this.pcmDataBuffer);
         newBuffer.set(buffer, this.pcmDataBuffer.length);
@@ -171,9 +194,10 @@ export class AudioRecorder {
                 if (opusData && opusData.length > 0) {
                     this.audioBuffers.push(opusData.buffer);
                     this.totalAudioSize += opusData.length;
-                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                    const websocket = this.recordingWebSocket;
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
                         try {
-                            this.websocket.send(opusData.buffer);
+                            websocket.send(opusData);
                         } catch (error) {
                             log(`WebSocket发送错误: ${error.message}`, 'error');
                         }
@@ -201,7 +225,16 @@ export class AudioRecorder {
 
     // Start recording
     async start() {
-        if (this.isRecording) return false;
+        if (this.isRecording || this.isStarting || this.isStopping) return false;
+        const websocket = this.websocket;
+        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+            log('WebSocket未连接，无法开始录音', 'error');
+            return false;
+        }
+        this.isStarting = true;
+        const generation = ++this.startGeneration;
+        const cancelled = () => generation !== this.startGeneration
+            || websocket !== this.websocket || websocket.readyState !== WebSocket.OPEN;
         try {
             if (!this.initEncoder()) {
                 log('无法开始录音: Opus编码器初始化失败', 'error');
@@ -209,10 +242,14 @@ export class AudioRecorder {
             }
             log('请至少录制1-2秒音频以确保收集足够的数据', 'info');
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000, channelCount: 1 } });
+            this.mediaStream = stream;
+            // 权限请求期间可能已经挂断；晚到的麦克风流也必须释放。
+            if (cancelled()) return false;
             this.audioContext = this.getAudioContext();
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
             }
+            if (cancelled()) return false;
             const processorResult = await this.createAudioProcessor();
             if (!processorResult) {
                 log('无法创建音频处理器', 'error');
@@ -220,6 +257,7 @@ export class AudioRecorder {
             }
             this.audioProcessor = processorResult.node;
             this.audioProcessorType = processorResult.type;
+            if (cancelled()) return false;
             this.audioSource = this.audioContext.createMediaStreamSource(stream);
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = 2048;
@@ -228,17 +266,13 @@ export class AudioRecorder {
             this.pcmDataBuffer = new Int16Array();
             this.audioBuffers = [];
             this.totalAudioSize = 0;
+            this.recordingWebSocket = websocket;
+            websocket.send(JSON.stringify({ type: 'listen', state: 'start', mode: 'auto' }));
             this.isRecording = true;
             if (this.audioProcessorType === 'worklet' && this.audioProcessor.port) {
                 this.audioProcessor.port.postMessage({ command: 'start' });
             }
-            // Send listening start message
-            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                log(`已发送录音开始消息`, 'info');
-            } else {
-                log('WebSocket未连接，无法发送开始消息', 'error');
-                return false;
-            }
+            log('已发送录音开始消息', 'info');
             // Start visualization
             if (this.onVisualizerUpdate) {
                 const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
@@ -260,8 +294,13 @@ export class AudioRecorder {
             return true;
         } catch (error) {
             log(`直接录音启动错误: ${error.message}`, 'error');
-            this.isRecording = false;
+            await this.stop();
             return false;
+        } finally {
+            this.isStarting = false;
+            if (!this.isRecording && !this.isStopping) {
+                this.releaseAudioResources();
+            }
         }
     }
 
@@ -278,47 +317,99 @@ export class AudioRecorder {
         draw();
     }
 
-    // Stop recording
-    stop() {
-        if (!this.isRecording) return false;
-        try {
-            this.isRecording = false;
-            if (this.audioProcessor) {
-                if (this.audioProcessorType === 'worklet' && this.audioProcessor.port) {
-                    this.audioProcessor.port.postMessage({ command: 'stop' });
-                }
-                this.audioProcessor.disconnect();
-                this.audioProcessor = null;
+    // Worklet sends its final PCM buffer before acknowledging stop on the same port.
+    async stopProcessor() {
+        if (this.audioProcessorType !== 'worklet' || !this.audioProcessor?.port) return;
+        await new Promise(resolve => {
+            const finish = () => {
+                clearTimeout(timeout);
+                this.onProcessorStopped = null;
+                resolve();
+            };
+            // A suspended or failed worklet must not prevent microphone cleanup.
+            const timeout = setTimeout(finish, 250);
+            this.onProcessorStopped = finish;
+            try {
+                this.audioProcessor.port.postMessage({ command: 'stop' });
+            } catch (error) {
+                finish();
             }
-            if (this.audioSource) {
-                this.audioSource.disconnect();
-                this.audioSource = null;
-            }
-            if (this.visualizationRequest) {
-                cancelAnimationFrame(this.visualizationRequest);
-                this.visualizationRequest = null;
-            }
-            if (this.recordingTimer) {
-                clearInterval(this.recordingTimer);
-                this.recordingTimer = null;
-            }
-            // Encode and send remaining data
-            this.encodeAndSendOpus();
-            // Send end signal
-            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                const emptyOpusFrame = new Uint8Array(0);
-                this.websocket.send(emptyOpusFrame);
-                log('已发送录音停止信号', 'info');
-            }
-            if (this.onRecordingStop) {
-                this.onRecordingStop();
-            }
-            log('已停止PCM直接录音', 'success');
-            return true;
-        } catch (error) {
-            log(`直接录音停止错误: ${error.message}`, 'error');
-            return false;
+        });
+    }
+
+    stopRecordingIndicators() {
+        if (this.visualizationRequest !== null) {
+            cancelAnimationFrame(this.visualizationRequest);
+            this.visualizationRequest = null;
         }
+        if (this.recordingTimer !== null) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+    }
+
+    releaseAudioResources() {
+        this.stopRecordingIndicators();
+        if (this.audioProcessor?.port) {
+            this.audioProcessor.port.onmessage = null;
+            try {
+                this.audioProcessor.port.close();
+            } catch (error) {
+                // Always continue to release the microphone.
+            }
+        }
+        for (const node of [this.audioSource, this.audioProcessor, this.analyser, this.silentGain]) {
+            try {
+                node?.disconnect();
+            } catch (error) {
+                // Disconnected nodes should not prevent the tracks from being stopped.
+            }
+        }
+        if (this.mediaStream) {
+            this.mediaStream.getTracks().forEach(track => track.stop());
+        }
+        this.mediaStream = null;
+        this.audioSource = null;
+        this.audioProcessor = null;
+        this.audioProcessorType = null;
+        this.analyser = null;
+        this.silentGain = null;
+        this.recordingWebSocket = null;
+    }
+
+    // Stop once, flush trailing audio, send the protocol stop, then release capture.
+    stop() {
+        ++this.startGeneration;
+        if (this.stopPromise) return this.stopPromise;
+        if (!this.isRecording) {
+            this.releaseAudioResources();
+            return Promise.resolve(false);
+        }
+        this.isRecording = false;
+        this.isStopping = true;
+        this.stopRecordingIndicators();
+        this.stopPromise = (async () => {
+            try {
+                await this.stopProcessor();
+                this.encodeAndSendOpus();
+                const websocket = this.recordingWebSocket;
+                if (websocket && websocket.readyState === WebSocket.OPEN) {
+                    websocket.send(JSON.stringify({ type: 'listen', state: 'stop' }));
+                    log('已发送录音停止消息', 'info');
+                }
+                log('已停止PCM直接录音', 'success');
+                return true;
+            } catch (error) {
+                log(`直接录音停止错误: ${error.message}`, 'error');
+                return false;
+            } finally {
+                this.releaseAudioResources();
+                this.isStopping = false;
+                this.stopPromise = null;
+                this.onRecordingStop?.();
+            }
+        })();
+        return this.stopPromise;
     }
 
     // Get analyser

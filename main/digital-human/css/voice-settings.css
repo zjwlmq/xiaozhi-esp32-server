@@ -1,0 +1,63 @@
+.voice-settings-toggle {
+    position: fixed; top: 20px; left: 20px; z-index: 1200;
+    display: flex; align-items: center; gap: 14px; padding: 12px 17px;
+    color: #342759; background: #fff; border: 1px solid #ece5fa; border-radius: 14px;
+    box-shadow: 0 4px 24px #24124512; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.voice-settings-toggle span { color: #796098; font-size: 11px; border-left: 1px solid #e4dced; padding-left: 14px; }
+.voice-settings-panel {
+    position: fixed; left: 20px; top: 82px; width: 350px; z-index: 1200;
+    display: flex; flex-direction: column;
+    max-height: calc(100dvh - 110px); overflow: hidden; overscroll-behavior: contain;
+    padding: 25px; color: #332b45; background: #fffc;
+    backdrop-filter: blur(28px); border: 1px solid #ffffffcf; border-radius: 20px;
+    box-shadow: 0 14px 50px #1b0d3726; scrollbar-width: thin;
+}
+.voice-settings-panel[hidden] { display: none; }
+#voiceSettingsForm { display: flex; flex-direction: column; min-height: 0; }
+.voice-controls { min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 2px 4px; margin: -2px -4px; }
+.voice-footer, .voice-settings-heading, .voice-intro { flex-shrink: 0; }
+.voice-settings-panel button, .voice-settings-panel select, .voice-settings-toggle { font-family: inherit; }
+.voice-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.voice-eyebrow { font: 600 10px/1.4 sans-serif; letter-spacing: 2px; color: #8b62bf; margin-bottom: 7px; }
+.voice-settings-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: -.6px; }
+#closeVoiceSettings { align-self: flex-start; background: transparent; border: 0; font-size: 26px; color: #796c8a; cursor: pointer; padding: 0 3px; }
+.voice-intro { font-size: 12px; line-height: 1.8; color: #776b85; margin: 12px 0 23px; }
+.voice-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.voice-settings-panel select {
+    width: 100%; min-height: 42px; padding: 9px 27px 9px 11px;
+    background: #fff; color: #533080; border: 1px solid #ddd3ee; border-radius: 9px; font-size: 13px;
+}
+#voiceVersion { color: #7240c8; font-weight: 600; }
+.voice-select-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 10px; margin-top: 17px; }
+.voice-select-row > div { min-width: 0; }
+.voice-hint { min-height: 36px; color: #83758f; font-size: 11px; line-height: 1.7; margin: 9px 0 18px; }
+.voice-slider-heading { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin: 16px 0 8px; }
+.voice-slider-heading output { background: #efe8fc; color: #7545b9; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.voice-settings-panel input[type=range] { width: 100%; accent-color: #8750dc; cursor: pointer; height: 24px; margin: 0; }
+.voice-range-labels { display: flex; justify-content: space-between; color: #897f93; font-size: 10px; }
+.voice-identity { border-top: 1px solid #e6deed; padding-top: 16px; margin-top: 22px; font-size: 11px; color: #87738e; overflow-wrap: anywhere; }
+.voice-actions { display: flex; gap: 9px; margin-top: 15px; }
+.voice-actions button { padding: 11px 14px; border: 1px solid #e0d6ed; border-radius: 9px; background: #fff; color: #7b638e; font-size: 12px; cursor: pointer; }
+#applyVoiceSettings { flex: 1; background: #8550d8; border-color: #8550d8; color: #fff; font-weight: 600; }
+.voice-status { min-height: 34px; margin-top: 12px; font-size: 11px; line-height: 1.6; color: #7d7188; }
+.voice-status[data-state=applied], .voice-status[data-state=saved] { color: #397756; }
+.voice-status[data-state=pending] { color: #876327; }
+.voice-status[data-state=error] { color: #b3324c; }
+.voice-settings-panel :disabled { opacity: .5; cursor: not-allowed; }
+.voice-settings-panel :focus-visible, .voice-settings-toggle:focus-visible { outline: 2px solid #8750dc; outline-offset: 3px; }
+.camera-container { left: auto; right: 20px; top: 80px; }
+@media (max-width: 700px) {
+    .voice-settings-toggle { top: 14px; left: 12px; padding: 10px 13px; gap: 9px; }
+    .voice-settings-toggle span { padding-left: 9px; }
+    .voice-settings-panel { left: 12px; right: 12px; top: 68px; width: auto; max-height: calc(100dvh - 144px); padding: 21px; background: #fcfafff7; }
+    .connection-status-top .status-indicator { left: auto; right: 12px; transform: none; }
+    .camera-container { right: 12px; top: 75px; }
+}
+@media (min-width: 701px) and (max-height: 850px) {
+    .voice-settings-panel { padding: 20px; }
+    .voice-intro { margin: 8px 0 14px; }
+    .voice-hint { min-height: 30px; margin-bottom: 10px; }
+    .voice-slider-heading { margin-top: 12px; }
+    .voice-identity { margin-top: 16px; padding-top: 12px; }
+}

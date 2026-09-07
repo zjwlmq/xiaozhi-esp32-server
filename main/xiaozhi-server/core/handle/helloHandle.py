@@ -14,6 +14,7 @@ from core.utils.wakeup_word import WakeupWordsConfig
 from core.handle.sendAudioHandle import sendAudioMessage, send_tts_message
 from core.utils.util import remove_punctuation_and_length, opus_datas_to_wav_bytes
 from core.providers.tools.device_mcp import MCPClient, send_mcp_initialize_message
+from core.utils.voice_settings import configure_voice_settings
 
 TAG = __name__
 
@@ -60,10 +61,18 @@ async def handleHelloMessage(conn: "ConnectionHandler", msg_json):
             conn.logger.bind(tag=TAG).debug("客户端启用了服务端AEC")
             conn.client_aec = True
 
-    await conn.websocket.send(json.dumps(conn.welcome_msg))
+    welcome = dict(conn.welcome_msg)
+    if features and features.get("voice_settings"):
+        welcome["voice_settings"] = configure_voice_settings(conn, msg_json.get("voice_settings"))
+    await conn.websocket.send(json.dumps(welcome))
 
 
 async def checkWakeupWords(conn: "ConnectionHandler", text):
+    # A browser can restore defaults between utterances. Its provider may still hold
+    # the previous settings here, so do not read or populate the voice-only cache.
+    if ((getattr(conn, "features", None) or {}).get("voice_settings")
+            or getattr(conn, "browser_tts_settings", None)):
+        return False
     enable_wakeup_words_response_cache = conn.config[
         "enable_wakeup_words_response_cache"
     ]

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>小智无硬件测试台</title>
     <link rel="stylesheet" href="css/index.css?v=0206">
+    <link rel="stylesheet" href="css/voice-settings.css?v=0907">
     <script>
         // 检测是否使用file://协议打开
         if (window.location.protocol === 'file:') {
@@ -37,6 +38,57 @@
 </head>
 
 <body>
+    <button id="voiceSettingsBtn" class="voice-settings-toggle" type="button"
+        aria-controls="voiceSettingsPanel" aria-expanded="true">声音设置 <span>无硬件版</span></button>
+    <section id="voiceSettingsPanel" class="voice-settings-panel" aria-labelledby="voiceSettingsHeading">
+        <div class="voice-settings-heading">
+            <div><p class="voice-eyebrow">VOICE STUDIO</p><h2 id="voiceSettingsHeading">调出你喜欢的声音</h2></div>
+            <button id="closeVoiceSettings" type="button" aria-label="收起声音设置">×</button>
+        </div>
+        <p class="voice-intro">用浏览器直接对话，自由调整下一次回复的声音。</p>
+        <form id="voiceSettingsForm">
+            <div class="voice-controls">
+                <label class="voice-label" for="voiceVersion">声音模型</label>
+                <select id="voiceVersion">
+                    <option value="server">跟随智能体设置</option>
+                    <option value="1.0">Doubao · 声音复刻 1.0</option>
+                    <option value="2.0">Doubao · 声音复刻 2.0</option>
+                </select>
+                <div class="voice-select-row">
+                    <div><label class="voice-label" for="voiceGeneration">生成配置</label>
+                        <select id="voiceGeneration" aria-describedby="voiceGenerationHint">
+                            <option value="standard">标准版</option>
+                            <option value="restoration">还原版</option>
+                            <option value="expressive">表现力增强版</option>
+                            <option value="trained" hidden>跟随音色训练</option>
+                        </select>
+                    </div>
+                    <div><label class="voice-label" for="voiceLanguage">语种</label>
+                        <select id="voiceLanguage">
+                            <option value="zh-cn">简体中文</option>
+                            <option value="en">English</option>
+                            <option value="auto">中英混读</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="voiceGenerationHint" class="voice-hint"></p>
+                <div class="voice-slider-heading"><label for="voiceSpeed">语速</label><output id="voiceSpeedValue" for="voiceSpeed">1.0×</output></div>
+                <input id="voiceSpeed" type="range" min="0.5" max="2" step="0.1" value="1" aria-label="语速">
+                <div class="voice-range-labels"><span>0.5× 慢一些</span><span>2.0× 快一些</span></div>
+                <div class="voice-slider-heading"><label for="voicePitch">音调</label><output id="voicePitchValue" for="voicePitch">0 半音</output></div>
+                <input id="voicePitch" type="range" min="-12" max="12" step="1" value="0" aria-label="音调">
+                <div class="voice-range-labels"><span>−12 低沉</span><span>+12 明亮</span></div>
+                <p id="voiceIdentity" class="voice-identity">音色跟随当前绑定的智能体</p>
+            </div>
+            <div class="voice-footer">
+                <div class="voice-actions">
+                    <button id="resetVoiceSettings" type="button">恢复默认</button>
+                    <button id="applyVoiceSettings" type="submit">应用设置</button>
+                </div>
+                <p id="voiceSettingsStatus" class="voice-status" role="status" aria-live="polite"></p>
+            </div>
+        </form>
+    </section>
     <!-- 背景容器 -->
     <div class="background-container" id="backgroundContainer">
         <div class="background-overlay"></div>
@@ -391,13 +443,13 @@
     <script src="js/live2d/cubism4.min.js?v=0205"></script>
 
     <!-- Live2D 管理器 -->
-    <script src="js/live2d/live2d.js?v=0205"></script>
+    <script src="js/live2d/live2d.js?v=0907"></script>
 
     <!-- Opus解码库 -->
     <script src="js/utils/libopus.js?v=0205"></script>
 
     <!-- 主应用入口 -->
-    <script type="module" src="js/app.js?v=0205"></script>
+    <script type="module" src="js/app.js?v=0907"></script>
 
     <!-- 全局错误处理 -->
     <script>

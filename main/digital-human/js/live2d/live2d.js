@@ -338,6 +338,8 @@ class Live2DManager {
             // 添加窗口大小变化监听器，保持模型在Canvas中间和底部
             window.addEventListener('resize', () => {
                 if (this.live2dModel) {
+                    // Keep the drawing surface in sync with the new viewport.
+                    this.live2dApp.renderer.resize(window.innerWidth, window.innerHeight);
                     // 使用窗口实际尺寸重新计算模型位置
                     this.live2dModel.x = (window.innerWidth - this.live2dModel.width) * 0.5;
                     this.live2dModel.y = -50;

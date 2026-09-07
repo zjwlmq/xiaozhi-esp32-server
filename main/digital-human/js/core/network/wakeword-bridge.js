@@ -1,5 +1,5 @@
-import { uiController } from '../../ui/controller.js?v=0205';
-import { log } from '../../utils/logger.js?v=0205';
+import { uiController } from '../../ui/controller.js?v=0907';
+import { log } from '../../utils/logger.js?v=0907';
 
 let wakewordSocket = null;
 let reconnectTimer = null;

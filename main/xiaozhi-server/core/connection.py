@@ -828,7 +828,12 @@ class ConnectionHandler:
         except Exception as e:
             self.need_bind = True
             self.logger.bind(tag=TAG).error(f"异步获取差异化配置失败: {e}")
-            private_config = {}
+            # 配置服务故障不是未绑定设备，关闭连接，避免使用公共模型或误播绑定提示。
+            if self.websocket is not None:
+                await self.websocket.close(
+                    code=1011, reason="Device configuration unavailable"
+                )
+            raise
 
         init_llm, init_tts, init_memory, init_intent = (
             False,

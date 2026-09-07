@@ -40,6 +40,9 @@ class ListenTextMessageHandler(TextMessageHandler):
             if conn.asr is None:
                 return
 
+            await conn.asr.wait_for_audio_processed(conn)
+            if conn.stop_event.is_set():
+                return
             conn.client_voice_stop = True
             if conn.asr.interface_type == InterfaceType.STREAM:
                 # 流式模式下，发送结束请求

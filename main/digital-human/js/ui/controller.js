@@ -1,10 +1,11 @@
 // UI controller module
-import { loadConfig, saveConfig } from '../config/manager.js?v=0205';
-import { getAudioPlayer } from '../core/audio/player.js?v=0205';
-import { getAudioRecorder } from '../core/audio/recorder.js?v=0205';
-import { requestWakewordBridge, stopWakewordBridgeListener, startWakewordBridgeListener, getWakewordBridgeUrl, onNextBridgeConnected } from '../core/network/wakeword-bridge.js?v=0205';
-import { getWebSocketHandler } from '../core/network/websocket.js?v=0205';
-import { log } from '../utils/logger.js?v=0205';
+import { loadConfig, saveConfig } from '../config/manager.js?v=0907';
+import { getAudioPlayer } from '../core/audio/player.js?v=0907';
+import { getAudioRecorder } from '../core/audio/recorder.js?v=0907';
+import { requestWakewordBridge, stopWakewordBridgeListener, startWakewordBridgeListener, getWakewordBridgeUrl, onNextBridgeConnected } from '../core/network/wakeword-bridge.js?v=0907';
+import { getWebSocketHandler } from '../core/network/websocket.js?v=0907';
+import { log } from '../utils/logger.js?v=0907';
+import { VoiceSettingsPanel } from './voice-settings.js?v=0907';
 
 // UI controller class
 class UIController {
@@ -51,11 +52,16 @@ class UIController {
         this.initEventListeners();
         this.startAudioStatsMonitor();
         loadConfig();
+        this.voiceSettingsPanel = new VoiceSettingsPanel(getWebSocketHandler);
+        this.voiceSettingsPanel.init();
 
         // Register recording callback
         const audioRecorder = getAudioRecorder();
         audioRecorder.onRecordingStart = (seconds) => {
             this.updateRecordButtonState(true, seconds);
+        };
+        audioRecorder.onRecordingStop = () => {
+            this.updateRecordButtonState(false);
         };
 
         // Initialize status display
@@ -210,22 +216,17 @@ class UIController {
                     clearTimeout(recordTimer);
                     recordTimer = null;
                 }
-                recordTimer = setTimeout(() => {
+                recordTimer = setTimeout(async () => {
                     const audioRecorder = getAudioRecorder();
-                    if (audioRecorder.isRecording) {
-                        audioRecorder.stop();
-                        // Restore record button to normal state
-                        recordBtn.classList.remove('recording');
-                        recordBtn.querySelector('.btn-text').textContent = '录音';
-                    } else {
-                        // Update button state to recording
-                        recordBtn.classList.add('recording');
-                        recordBtn.querySelector('.btn-text').textContent = '录音中';
-
-                        // Start recording, update button state after delay
-                        setTimeout(() => {
-                            audioRecorder.start();
-                        }, 100);
+                    recordBtn.disabled = true;
+                    try {
+                        if (audioRecorder.isRecording || audioRecorder.isStarting) {
+                            await audioRecorder.stop();
+                        } else {
+                            await audioRecorder.start();
+                        }
+                    } finally {
+                        this.updateRecordButtonState(audioRecorder.isRecording);
                     }
                 }, 300);
             });
@@ -407,7 +408,8 @@ class UIController {
                 recordBtn.classList.remove('recording');
             }
             // Only enable button when microphone is available
-            recordBtn.disabled = window.microphoneAvailable === false;
+            recordBtn.disabled = window.microphoneAvailable === false
+                || !getWebSocketHandler().isConnected();
         }
     }
 
@@ -443,7 +445,10 @@ class UIController {
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
-        messageDiv.innerHTML = `<div class="message-bubble">${content}</div>`;
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = content;
+        messageDiv.appendChild(bubble);
         chatStream.appendChild(messageDiv);
 
         // Scroll to bottom
@@ -643,7 +648,7 @@ class UIController {
     startAIChatSession() {
         this.addChatMessage('连接成功，开始聊天吧~😊', false);
         // Check microphone availability and show error messages if needed
-        if (!window.microphoneAvailable) {
+        if (window.microphoneAvailable === false) {
             if (window.isHttpNonLocalhost) {
                 this.addChatMessage('⚠️ 当前由于是http访问，无法录音，只能用文字交互', false);
             } else {
@@ -751,7 +756,7 @@ class UIController {
 
             if (isConnected) {
                 // Check microphone availability (check again after connection)
-                const { checkMicrophoneAvailability } = await import('../core/audio/recorder.js?v=0205');
+                const { checkMicrophoneAvailability } = await import('../core/audio/recorder.js?v=0907');
                 const micAvailable = await checkMicrophoneAvailability();
 
                 if (!micAvailable) {

@@ -1,4 +1,5 @@
 import os
+import copy
 import uuid
 import json
 import queue
@@ -12,6 +13,7 @@ from core.utils.util import check_model_key
 from core.providers.tts.base import TTSProviderBase
 from core.utils.tts import MarkdownCleaner, convert_percentage_to_range
 from core.providers.tts.dto.dto import SentenceType, ContentType, InterfaceType
+from core.utils.voice_settings import build_voice_parameters, get_voice_variants
 
 
 TAG = __name__
@@ -202,6 +204,15 @@ class TTSProvider(TTSProviderBase):
         enable_ws_reuse_value = config.get("enable_ws_reuse", True)
         self.enable_ws_reuse = False if str(enable_ws_reuse_value).lower() == 'false' else True
         self.tts_text = ""
+        self.synthesis_model = config.get("model")
+        self._voice_defaults = copy.deepcopy({
+            "resource_id": self.resource_id,
+            "model": self.synthesis_model,
+            "speaker": self.voice,
+            "variants": get_voice_variants(config, self.voice),
+            "audio_params": self.audio_params,
+            "additions": self.additions,
+        })
 
         model_key_msg = check_model_key(
             "TTS", self.api_key or self.access_token
@@ -231,6 +242,7 @@ class TTSProvider(TTSProviderBase):
             await super().open_audio_channels(conn)
             # 更新 audio_params 中的采样率为实际的 conn.sample_rate
             self.audio_params["sample_rate"] = conn.sample_rate
+            self._voice_defaults["audio_params"]["sample_rate"] = conn.sample_rate
         except Exception as e:
             logger.bind(tag=TAG).error(f"Failed to open audio channels: {str(e)}")
             self.ws = None
@@ -418,6 +430,8 @@ class TTSProvider(TTSProviderBase):
             # 上个会话处于激活状态时关闭上个连接新建链接
             if self.activate_session:
                 await self.close()
+
+            await self._apply_browser_voice_settings()
             
             # 设置会话激活标志
             self.activate_session = True
@@ -442,7 +456,36 @@ class TTSProvider(TTSProviderBase):
             logger.bind(tag=TAG).error(f"启动会话失败: {str(e)}")
             # 确保清理资源
             await self.close()
+            await self._notify_voice_settings_error()
             raise
+
+    async def _apply_browser_voice_settings(self):
+        parameters = build_voice_parameters(
+            self._voice_defaults, getattr(self.conn, "browser_tts_settings", None)
+        )
+        if self.resource_id != parameters["resource_id"] and self.ws:
+            # Resource IDs are connection headers, so a version change needs a new socket.
+            previous_ws = self.ws
+            await self._cancel_monitor_task()
+            await previous_ws.close()
+            self.ws = None
+        self.resource_id = parameters["resource_id"]
+        self.voice = parameters["speaker"]
+        self.synthesis_model = parameters["model"]
+        self.audio_params = parameters["audio_params"]
+        self.additions = parameters["additions"]
+
+    async def _notify_voice_settings_error(self):
+        if ((getattr(self.conn, "features", None) or {}).get("voice_settings")
+                or getattr(self.conn, "browser_tts_settings", None)):
+            try:
+                await self.conn.websocket.send(json.dumps({
+                    "type": "voice_settings", "status": "error",
+                    "message": "语音合成失败，请确认所选复刻版本已开通且当前音色支持该版本。",
+                }, ensure_ascii=False))
+            except Exception:
+                pass
+            self.tts_audio_queue.put((SentenceType.LAST, [], None))
 
     async def finish_session(self, session_id):
         logger.bind(tag=TAG).debug(f"关闭会话～～{session_id}")
@@ -523,7 +566,11 @@ class TTSProvider(TTSProviderBase):
                             self.activate_session = False
                         continue
 
-                    if res.optional.event == EVENT_SessionCanceled:
+                    if res.optional.event == EVENT_SessionFailed or res.header.message_type == ERROR_INFORMATION:
+                        self.activate_session = False
+                        await self._notify_voice_settings_error()
+                        break
+                    elif res.optional.event == EVENT_SessionCanceled:
                         logger.bind(tag=TAG).debug(f"释放服务端资源成功～～")
                         self.activate_session = False
                     elif not self.resource_type and res.optional.event == EVENT_TTSSentenceStart:
@@ -708,6 +755,8 @@ class TTSProvider(TTSProviderBase):
             "audio_params": {**self.audio_params, "format": audio_format},
             "additions": json.dumps(self.additions)
         }
+        if self.synthesis_model:
+            req_params["model"] = self.synthesis_model
         
         # 如果有 mix_speaker 配置，添加到 req_params
         if self.mix_speaker:

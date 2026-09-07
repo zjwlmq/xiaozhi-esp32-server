@@ -1,11 +1,12 @@
 // WebSocket消息处理模块
-import { getConfig, saveConnectionUrls } from '../../config/manager.js?v=0205';
-import { uiController } from '../../ui/controller.js?v=0205';
-import { log } from '../../utils/logger.js?v=0205';
-import { getAudioPlayer } from '../audio/player.js?v=0205';
-import { getAudioRecorder } from '../audio/recorder.js?v=0205';
-import { executeMcpTool, getMcpTools, setWebSocket as setMcpWebSocket } from '../mcp/tools.js?v=0205';
-import { webSocketConnect } from './ota-connector.js?v=0205';
+import { getConfig, saveConnectionUrls } from '../../config/manager.js?v=0907';
+import { uiController } from '../../ui/controller.js?v=0907';
+import { log } from '../../utils/logger.js?v=0907';
+import { getAudioPlayer } from '../audio/player.js?v=0907';
+import { getAudioRecorder } from '../audio/recorder.js?v=0907';
+import { executeMcpTool, getMcpTools, setWebSocket as setMcpWebSocket } from '../mcp/tools.js?v=0907';
+import { webSocketConnect } from './ota-connector.js?v=0907';
+import { getStoredVoiceSettings } from '../../config/voice-settings.js?v=0907';
 
 // WebSocket处理器类
 export class WebSocketHandler {
@@ -18,6 +19,8 @@ export class WebSocketHandler {
         this.onChatMessage = null; // 新增：聊天消息回调
         this.currentSessionId = null;
         this.isRemoteSpeaking = false;
+        this.voiceSettingsProtocol = false;
+        this.onVoiceSettingsMessage = null;
     }
 
     // 发送hello握手消息
@@ -35,8 +38,10 @@ export class WebSocketHandler {
                 token: config.token,
                 features: {
                     mcp: true,
-                    emoji: config.emojiEnabled
-                }
+                    emoji: config.emojiEnabled,
+                    voice_settings: true
+                },
+                voice_settings: getStoredVoiceSettings()
             };
 
             log('发送hello握手消息', 'info');
@@ -96,6 +101,8 @@ export class WebSocketHandler {
     // 处理文本消息
     handleTextMessage(message) {
         if (message.type === 'hello') {
+            this.voiceSettingsProtocol = Boolean(message.voice_settings);
+            this.onVoiceSettingsMessage?.(message.voice_settings || {status: 'unsupported'});
             log(`服务器回应：${JSON.stringify(message, null, 2)}`, 'success');
             window.cameraAvailable = true;
             log('连接成功，摄像头已可用', 'success');
@@ -104,6 +111,8 @@ export class WebSocketHandler {
             this._sendWakeupMessages(message.session_id);
 
             uiController.startAIChatSession();
+        } else if (message.type === 'voice_settings') {
+            this.onVoiceSettingsMessage?.(message);
         } else if (message.type === 'tts') {
             this.handleTTSMessage(message);
         } else if (message.type === 'audio') {
@@ -452,6 +461,8 @@ export class WebSocketHandler {
         };
 
         this.websocket.onclose = () => {
+            this.voiceSettingsProtocol = false;
+            this.onVoiceSettingsMessage?.({status: 'disconnected'});
             log('已断开连接', 'info');
 
             if (this.onConnectionStateChange) {
@@ -514,6 +525,19 @@ export class WebSocketHandler {
         const cameraContainer = document.getElementById('cameraContainer');
         if (cameraContainer) {
             cameraContainer.classList.remove('active');
+        }
+    }
+
+    // 发送当前浏览器会话的声音设置，等待服务端确认
+    sendVoiceSettings(settings, requestId) {
+        if (!this.isConnected() || !this.voiceSettingsProtocol) return false;
+        try {
+            this.websocket.send(JSON.stringify({
+                type: 'voice_settings', request_id: requestId, settings: { ...settings }
+            }));
+            return true;
+        } catch {
+            return false;
         }
     }
 

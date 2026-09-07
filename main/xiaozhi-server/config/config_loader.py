@@ -7,8 +7,6 @@ from config.manage_api_client import (
     get_server_config,
     get_agent_models,
     get_correct_words,
-    DeviceNotFoundException,
-    DeviceBindException,
 )
 
 
@@ -92,15 +90,15 @@ async def get_private_config_from_api(config, device_id, client_id):
         return_exceptions=True,
     )
     agent_result = results[0]
-    correct_words = results[1] if not isinstance(results[1], Exception) else None
+    correct_words = results[1] if not isinstance(results[1], BaseException) else None
 
-    # 抛出业务异常
-    if isinstance(agent_result, DeviceNotFoundException):
+    # 设备配置决定绑定状态和访问权限，任何失败都不能回退到公共配置。
+    if isinstance(agent_result, BaseException):
         raise agent_result
-    if isinstance(agent_result, DeviceBindException):
-        raise agent_result
+    if not isinstance(agent_result, dict) or not agent_result:
+        raise ValueError("Invalid or empty device configuration returned by manager-api")
 
-    private_config = agent_result if not isinstance(agent_result, Exception) else {}
+    private_config = dict(agent_result)
     if correct_words:
         private_config["correct_words"] = correct_words
     return private_config
