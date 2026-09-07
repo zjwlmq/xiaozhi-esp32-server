@@ -133,7 +133,9 @@ class ModelConfigEditorTest {
     void authorizedEditorResponseIsNotCacheable() {
         ThreadContext.bind(mock(Subject.class));
         ModelConfigService mockService = mock(ModelConfigService.class);
-        when(mockService.getModelForEditor(saved.getId())).thenReturn(service.getModelForEditor(saved.getId()));
+        // Build the DTO first: loading it calls the mocked DAO and must not nest inside stubbing.
+        ModelConfigDTO editorConfig = service.getModelForEditor(saved.getId());
+        when(mockService.getModelForEditor(saved.getId())).thenReturn(editorConfig);
         MockHttpServletResponse response = new MockHttpServletResponse();
         ModelConfigDTO result = securedController(mockService).getModelForEditor(saved.getId(), response).getData();
         assertEquals("sk-offline-test-secret", result.getConfigJson().getStr("api_key"));
