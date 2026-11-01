@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 root=Path(sys.argv[1]).resolve()
 for path in (Path(sys.argv[2]), root/'.env'):
-    if path.is_symlink() or not path.resolve().is_relative_to(root):
+    if path.is_symlink() or root not in path.resolve().parents:
         raise SystemExit('配置路径不在部署目录内，或使用了符号链接；未修改服务。')
 PY
 grep -qF '${XIAOZHI_SERVER_IMAGE' "$compose_file" && grep -qF '${XIAOZHI_WEB_IMAGE' "$compose_file" || die 'Compose 使用固定镜像或其他格式；请提供部署检查输出，未修改服务。'
