@@ -26,7 +26,7 @@ if [[ "$mode" == --apply ]]; then
     flock -n 9 || die '另一个安装或更新任务正在运行。'
 fi
 
-project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$server")
+project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$server" 2>/dev/null) || die '未找到默认名称的容器。迁移后的 compose.json 部署请使用 deploy/update-plugin-compose-json.py，并指定 --project 和 --file；未修改服务。'
 deploy_dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$server")
 compose_file=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$server")
 [[ "$project" =~ ^[a-zA-Z0-9_-]+$ && "$deploy_dir" == /* && -d "$deploy_dir" ]] || die '未识别到现有 Docker Compose 部署；未修改服务。'

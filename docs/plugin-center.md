@@ -33,6 +33,17 @@ plugin_center_image_allowed_origins:
 
 脚本沿用现有数据目录、MySQL 和 Redis 服务，备份及回滚脚本保存在检测到的部署目录下的 `backups/plugin-center-*`。回滚脚本恢复应用镜像和配置；数据库备份保留供单独恢复，不自动覆盖数据库。固定镜像、多份 Compose 文件、无 Compose 标签等布局会停止检查，需要按实际部署方式调整命令。
 
+迁移后的 `compose.json` 部署使用单独的适配脚本，它支持带项目名前缀的容器、没有 `.env` 的配置及命名卷：
+
+```bash
+python3 deploy/update-plugin-compose-json.py --project existing-project --file /srv/xiaozhi/compose.json --check
+# 检查通过后，以 root 执行同一命令，将 --check 改为 --apply。
+```
+
+此脚本读取运行容器的真实镜像 ID，为旧镜像保存回滚标签；即使迁移镜像的原标签已清理，也可保留原版本。Python 新镜像以当前镜像为基础保留 CPU 依赖，只补充插件依赖和应用代码。管理端构建限制编译并发与内存。完成构建和数据库备份后，仅修改 JSON 中两个应用服务的镜像字段，并依次重建管理端和 Python 服务，保留原端口、命令、环境、网络和数据卷。MySQL、Redis 及其他服务不重建。
+
+备份保存在原配置目录的 `backups/plugins-*`，包含原 JSON、运行配置（存在时）、数据库备份和可单独执行的回滚程序。更新失败会尝试恢复旧应用镜像；不自动还原数据库。若期间配置被其他操作修改，脚本会停止覆盖。检测与更新流程经过模拟 Docker 的测试，实际构建、数据库迁移和服务就绪情况由服务器执行时检查。
+
 纯本地配置模式可以在 `data/.config.yaml` 中使用：
 
 ```yaml
