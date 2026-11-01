@@ -66,7 +66,7 @@ class ListenTextMessageHandler(TextMessageHandler):
                 )
 
                 # 检查是否是设备呼叫指令 [device_call]
-                if original_text.startswith("[device_call]"):
+                if original_text.startswith("[device_call]") and not getattr(conn, "channel_type", None):
                     # 提取 tag 后的文本
                     call_text = original_text[len("[device_call]"):].strip()
                     conn.logger.bind(tag=TAG).info(f"收到设备呼叫指令: {call_text}")

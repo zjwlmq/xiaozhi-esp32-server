@@ -42,6 +42,11 @@ async def load_config():
     else:
         # 合并配置
         config = merge_configs(default_config, custom_config)
+    # Separate mounted file keeps QQ credentials out of agent configuration and source control.
+    qq_config_path = get_project_dir() + "data/.qq-bridge.yaml"
+    if os.path.isfile(qq_config_path):
+        qq_config = read_config(qq_config_path)
+        config["qq_bridge"] = (qq_config or {}).get("qq_bridge", {})
     # 初始化目录
     ensure_directories(config)
 
@@ -63,6 +68,7 @@ async def get_config_from_api_async(config):
     config_data["read_config_from_api"] = True
     # Network access exceptions are set by the server operator, never by an agent.
     config_data["plugin_center_image_allowed_origins"] = config.get("plugin_center_image_allowed_origins", [])
+    config_data["qq_bridge"] = config.get("qq_bridge", {})
     config_data["manager-api"] = {
         "url": config["manager-api"].get("url", ""),
         "secret": config["manager-api"].get("secret", ""),

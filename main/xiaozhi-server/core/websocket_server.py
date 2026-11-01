@@ -113,16 +113,7 @@ class WebSocketServer:
             await websocket.send("认证失败")
             await websocket.close()
             return
-        # 创建ConnectionHandler时传入当前server实例
-        handler = ConnectionHandler(
-            self.config,
-            self._vad,
-            self._asr,
-            self._llm,
-            self._memory,
-            self._intent,
-            self,  # 传入server实例
-        )
+        handler = self.create_connection()
         try:
             await handler.handle_connection(websocket)
         except Exception as e:
@@ -142,6 +133,11 @@ class WebSocketServer:
                 self.logger.bind(tag=TAG).error(
                     f"服务器端强制关闭连接时出错: {close_error}"
                 )
+
+    def create_connection(self, channel_type=None):
+        """Share provider setup with trusted channels; devices still bind through OTA."""
+        return ConnectionHandler(self.config, self._vad, self._asr, self._llm,
+                                 self._memory, self._intent, self, channel_type=channel_type)
 
     async def _http_response(self, websocket, request_headers):
         # 检查是否为 WebSocket 升级请求

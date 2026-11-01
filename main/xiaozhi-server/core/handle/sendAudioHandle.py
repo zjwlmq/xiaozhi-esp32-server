@@ -311,7 +311,8 @@ async def send_tts_message(conn: "ConnectionHandler", state, text=None):
 
     # 发送消息到客户端
     await conn.websocket.send(json.dumps(message))
-    if state == "sentence_start" and text and getattr(conn, "plugin_runtime", None):
+    if (state == "sentence_start" and text and getattr(conn, "plugin_runtime", None)
+            and not getattr(conn, "channel_type", None)):
         try:
             event_id = str(conn.sentence_id) + ":" + hashlib.sha256(text.encode("utf-8")).hexdigest()
             conn.plugin_runtime.record_sent(event_id, conn.sentence_id)

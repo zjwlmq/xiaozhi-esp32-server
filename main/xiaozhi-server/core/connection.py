@@ -91,12 +91,18 @@ class ConnectionHandler:
             _memory,
             _intent,
             server=None,
+            channel_type=None,
     ):
         self.common_config = config
         self.config = copy.deepcopy(config)
         self.session_id = str(uuid.uuid4())
         self.logger = setup_logging()
         self.server = server  # 保存server实例的引用
+        # Only an authenticated, in-process channel factory can set this value.
+        self.channel_type = channel_type
+        self.components_ready = asyncio.Event()
+        self.components_error = None
+        self._shared_memory = _memory
 
         self.need_bind = False  # 是否需要绑定设备
         self.bind_completed_event = asyncio.Event()
@@ -646,6 +652,11 @@ class ConnectionHandler:
             )
 
             """加载记忆"""
+            if (self.channel_type and self.memory is self._shared_memory
+                    and self.config.get("selected_module", {}).get("Memory")):
+                self.memory = initialize_modules(
+                    self.logger, self.config, False, False, False, False, True, False
+                ).get("memory")
             self._initialize_memory()
             """加载意图识别"""
             self._initialize_intent()
@@ -666,6 +677,9 @@ class ConnectionHandler:
 
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"实例化组件失败: {e}")
+            self.components_error = type(e).__name__
+        finally:
+            self.loop.call_soon_threadsafe(self.components_ready.set)
 
     def _init_prompt_enhancement(self):
 
@@ -756,6 +770,9 @@ class ConnectionHandler:
 
     def _initialize_tts(self):
         """初始化TTS"""
+        if self.channel_type == "qq_text":
+            from core.channels.qq.text_tts import TextTTS
+            return TextTTS()
         tts = None
         if not self.need_bind:
             tts = initialize_tts(self.config)
@@ -807,6 +824,9 @@ class ConnectionHandler:
             self.executor.submit(self._initialize_components)
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"后台初始化失败: {e}")
+            if getattr(self, "components_ready", None):
+                self.components_error = type(e).__name__
+                self.components_ready.set()
 
     async def _initialize_private_config_async(self):
         """从接口异步获取差异化配置（异步版本，不阻塞主循环）"""
@@ -927,6 +947,8 @@ class ConnectionHandler:
             ]
 
         # 使用 run_in_executor 在线程池中执行 initialize_modules，避免阻塞主循环
+        if getattr(self, "channel_type", None) == "qq_text":
+            init_tts = False
         try:
             modules = await self.loop.run_in_executor(
                 None,  # 使用默认线程池
@@ -942,6 +964,8 @@ class ConnectionHandler:
             )
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"初始化组件失败: {e}")
+            if getattr(self, "channel_type", None):
+                raise
             modules = {}
         if modules.get("tts", None) is not None:
             self.tts = modules["tts"]
@@ -1068,7 +1092,10 @@ class ConnectionHandler:
                 if refresh is not None and not refresh.done(): refresh.cancel()
                 self.logger.bind(tag=TAG).warning(f"插件配置更新失败: {type(plugin_error).__name__}")
             try:
-                self.plugin_runtime.begin_turn()
+                self.plugin_runtime.begin_turn(
+                    event_id=getattr(self, "channel_message_id", None),
+                    event_at=getattr(self, "channel_message_at", None),
+                )
                 if hasattr(self, "func_handler"):
                     self.func_handler.tool_manager._invalidate_cache()
             except Exception as plugin_error:

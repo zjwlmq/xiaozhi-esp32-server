@@ -1,0 +1,24 @@
+# Copy to data/.qq-bridge.yaml, or use: python tools/qq_bridge.py init --help
+# This file contains examples only. Keep real IDs and tokens in the mounted data directory.
+qq_bridge:
+  enabled: false
+  self_id: "100001"                         # QQ account logged into OneBot
+  api_key: "CHANGE_ME_TO_A_RANDOM_SECRET_AT_LEAST_32_CHARACTERS"
+  webhook_secret: ""                        # Optional OneBot HTTP POST HMAC secret
+  http_url: "http://qqfish-snowluma:3000"     # Actual OneBot HTTP API; not the WebUI port
+  websocket_url: "ws://qqfish-snowluma:3001"  # Forward WS; leave empty for HTTP POST events
+  access_token: ""                          # OneBot access token
+  turn_timeout: 180
+  max_event_age: 300
+  media_allowed_origins: []                  # Exact operator-approved origins for HTTP/private media
+  routes:
+    - id: friend
+      kind: private
+      peer_id: "200001"                     # Start with your own test QQ account
+      reply_mode: text                      # text / voice / both
+    # - id: test_group
+    #   kind: group
+    #   peer_id: "300001"
+    #   members: ["200001"]                  # Omit to accept any member of this allowed group
+    #   require_at: true
+    #   reply_mode: text

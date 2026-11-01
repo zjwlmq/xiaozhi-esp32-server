@@ -8,8 +8,9 @@ TAG = __name__
 
 
 class SimpleHttpServer:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, websocket_server=None):
         self.config = config
+        self.websocket_server = websocket_server
         self.logger = setup_logging()
         self.ota_handler = OTAHandler(config)
         self.vision_handler = VisionHandler(config)
@@ -33,6 +34,7 @@ class SimpleHttpServer:
             return f"ws://{local_ip}:{port}/xiaozhi/v1/"
 
     async def start(self):
+        runner = None
         try:
             server_config = self.config["server"]
             read_config_from_api = self.config.get("read_config_from_api", False)
@@ -41,6 +43,13 @@ class SimpleHttpServer:
 
             if port:
                 app = web.Application()
+                if self.config.get("qq_bridge", {}).get("enabled"):
+                    from core.channels.qq.settings import Settings
+                    from core.channels.qq.bridge import QQBridge
+                    settings = Settings.parse(self.config["qq_bridge"])
+                    if not self.websocket_server:
+                        raise ValueError("QQ channel requires the Xiaozhi WebSocket server")
+                    QQBridge(settings, self.config, self.websocket_server).register(app)
 
                 if not read_config_from_api:
                     # 如果没有开启智控台，只是单模块运行，就需要再添加简单OTA接口，用于下发websocket接口
@@ -90,3 +99,6 @@ class SimpleHttpServer:
 
             self.logger.bind(tag=TAG).error(f"错误堆栈: {traceback.format_exc()}")
             raise
+        finally:
+            if runner is not None:
+                await runner.cleanup()
