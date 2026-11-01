@@ -13,6 +13,7 @@ from .server_mcp import ServerMCPExecutor
 from .device_iot import DeviceIoTExecutor
 from .device_mcp import DeviceMCPExecutor
 from .mcp_endpoint import MCPEndpointExecutor
+from core.plugins.tool_executor import PluginCenterExecutor
 from core.handle.sendAudioHandle import send_display_message
 
 
@@ -50,6 +51,7 @@ class UnifiedToolHandler:
         self.tool_manager.register_executor(
             ToolType.MCP_ENDPOINT, self.mcp_endpoint_executor
         )
+        self.tool_manager.register_executor(ToolType.PLUGIN_CENTER, PluginCenterExecutor(conn))
 
         # 初始化标志
         self.finish_init = False

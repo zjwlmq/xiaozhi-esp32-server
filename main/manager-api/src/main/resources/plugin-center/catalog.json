@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "plugins": [
+    {
+      "id": "time-awareness",
+      "name": "时间感知",
+      "category": "感知",
+      "description": "理解当前日期、聊天间隔和历史事件的先后。",
+      "icon": "el-icon-time",
+      "dependencies": [],
+      "fields": [
+        {
+          "key": "timezone",
+          "label": "时区",
+          "type": "select",
+          "default": "Asia/Shanghai",
+          "options": [
+            "Asia/Shanghai",
+            "Asia/Hong_Kong",
+            "Asia/Taipei",
+            "UTC"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "holiday-awareness",
+      "name": "节假日感知",
+      "category": "感知",
+      "description": "识别公历与农历节日，结合已配置的放假、调休安排。",
+      "icon": "el-icon-date",
+      "dependencies": [
+        "time-awareness"
+      ],
+      "fields": [
+        {
+          "key": "lookahead_days",
+          "label": "提前感知天数",
+          "type": "integer",
+          "default": 3,
+          "min": 0,
+          "max": 30
+        },
+        {
+          "key": "calendar",
+          "label": "放假与调休日历",
+          "type": "json",
+          "default": [],
+          "help": "添加你确认的放假或调休日期。只有已填写的日期才确认休假或上班。"
+        }
+      ]
+    },
+    {
+      "id": "proactive-messaging",
+      "name": "主动消息",
+      "category": "互动",
+      "description": "在允许的时段主动聊两句，支持间隔限制和每天次数上限。",
+      "icon": "el-icon-chat-dot-round",
+      "dependencies": [
+        "time-awareness"
+      ],
+      "fields": [
+        {
+          "key": "interval_minutes",
+          "label": "最短安静间隔（分钟）",
+          "type": "integer",
+          "default": 120,
+          "min": 30,
+          "max": 10080
+        },
+        {
+          "key": "daily_limit",
+          "label": "每天最多主动消息",
+          "type": "integer",
+          "default": 2,
+          "min": 1,
+          "max": 10
+        },
+        {
+          "key": "quiet_start",
+          "label": "免打扰开始",
+          "type": "time",
+          "default": "22:00"
+        },
+        {
+          "key": "quiet_end",
+          "label": "免打扰结束",
+          "type": "time",
+          "default": "08:00"
+        },
+        {
+          "key": "instruction",
+          "label": "主动聊天偏好",
+          "type": "textarea",
+          "default": "结合最近的真实对话，自然接续话题。没有合适话题时跳过，不虚构正在做什么。",
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "id": "memory-optimizer",
+      "name": "记忆优化",
+      "category": "记忆",
+      "description": "按当前话题筛选记忆、去除重复段落，保留原文日期与事实边界。",
+      "icon": "el-icon-collection",
+      "dependencies": [],
+      "fields": [
+        {
+          "key": "max_characters",
+          "label": "本轮记忆字数上限",
+          "type": "integer",
+          "default": 4000,
+          "min": 500,
+          "max": 24000
+        },
+        {
+          "key": "deduplicate",
+          "label": "去除重复记忆",
+          "type": "boolean",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "image-generation",
+      "name": "生成图片",
+      "category": "创作",
+      "description": "连接图片生成服务，让支持图片消息的客户端接收生成结果。",
+      "icon": "el-icon-picture-outline",
+      "dependencies": [],
+      "fields": [
+        {
+          "key": "endpoint",
+          "label": "生图接口完整地址",
+          "type": "url",
+          "default": "",
+          "required": true,
+          "help": "使用兼容 OpenAI 图片生成协议的接口，例如 https://服务地址/v1/images/generations。"
+        },
+        {
+          "key": "api_key",
+          "label": "API 密钥",
+          "type": "secret",
+          "default": "",
+          "required": true
+        },
+        {
+          "key": "model",
+          "label": "模型",
+          "type": "text",
+          "default": "",
+          "required": true,
+          "maxLength": 100
+        },
+        {
+          "key": "size",
+          "label": "图片尺寸",
+          "type": "select",
+          "default": "1024x1024",
+          "options": [
+            "1024x1024",
+            "1536x1024",
+            "1024x1536",
+            "auto"
+          ]
+        }
+      ]
+    }
+  ]
+}

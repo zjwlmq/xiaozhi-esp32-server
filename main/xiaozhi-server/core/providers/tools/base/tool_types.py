@@ -11,6 +11,7 @@ class ToolType(Enum):
     """工具类型枚举"""
 
     SERVER_PLUGIN = "server_plugin"  # 服务端插件
+    PLUGIN_CENTER = "plugin_center"  # 可按智能体启停的能力插件
     SERVER_MCP = "server_mcp"  # 服务端MCP
     DEVICE_IOT = "device_iot"  # 设备端IoT
     DEVICE_MCP = "device_mcp"  # 设备端MCP

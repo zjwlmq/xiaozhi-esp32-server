@@ -169,6 +169,7 @@ class ConnectionHandler:
 
         # llm相关变量
         self.dialogue = Dialogue()
+        self.plugin_runtime = None
 
         # tts相关变量
         self.sentence_id = None
@@ -654,6 +655,14 @@ class ConnectionHandler:
             self._init_prompt_enhancement()
             """注入工具调用few-shot示例（仅function_call模式）"""
             self._inject_tool_call_fewshot()
+            # Optional capabilities share this connection's existing model and transport.
+            try:
+                from core.plugins.runtime import PluginRuntime
+                self.plugin_runtime = PluginRuntime(self)
+                self.dialogue.plugin_runtime = self.plugin_runtime
+                asyncio.run_coroutine_threadsafe(self.plugin_runtime.start(), self.loop)
+            except Exception as plugin_error:
+                self.logger.bind(tag=TAG).warning(f"插件中心初始化失败: {type(plugin_error).__name__}")
 
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"实例化组件失败: {e}")
@@ -1050,6 +1059,20 @@ class ConnectionHandler:
         return text
 
     def chat(self, query, depth=0):
+        if depth == 0 and self.plugin_runtime is not None:
+            refresh = None
+            try:
+                refresh = asyncio.run_coroutine_threadsafe(self.plugin_runtime.refresh(), self.loop)
+                refresh.result(timeout=4)
+            except Exception as plugin_error:
+                if refresh is not None and not refresh.done(): refresh.cancel()
+                self.logger.bind(tag=TAG).warning(f"插件配置更新失败: {type(plugin_error).__name__}")
+            try:
+                self.plugin_runtime.begin_turn()
+                if hasattr(self, "func_handler"):
+                    self.func_handler.tool_manager._invalidate_cache()
+            except Exception as plugin_error:
+                self.logger.bind(tag=TAG).warning(f"插件时间更新失败: {type(plugin_error).__name__}")
         # 保存当前任务的sentence_id到局部变量，避免被新任务覆盖
         current_sentence_id = None
 
@@ -1114,6 +1137,8 @@ class ConnectionHandler:
                     self.memory.query_memory(query), self.loop
                 )
                 memory_str = future.result()
+            if self.plugin_runtime is not None:
+                memory_str = self.plugin_runtime.prepare_memory(memory_str, query)
 
             # 仅在该说话人首次出现时把身份注入 system，之后靠对话历史首轮保留，
             # 避免每轮在 system 重复出现名字诱导模型反复称呼
@@ -1567,6 +1592,8 @@ class ConnectionHandler:
     async def close(self, ws=None):
         """资源清理方法"""
         try:
+            if self.plugin_runtime is not None:
+                await self.plugin_runtime.close()
             # 清理 VAD 连接资源
             if (
                     hasattr(self, "vad")
@@ -1752,7 +1779,8 @@ class ConnectionHandler:
                 # 检查是否超时（只有在时间戳已初始化的情况下）
                 if last_activity_time > 0.0:
                     current_time = time.time() * 1000
-                    if current_time - last_activity_time > self.timeout_seconds * 1000:
+                    if (current_time - last_activity_time > self.timeout_seconds * 1000
+                            and not (self.plugin_runtime and self.plugin_runtime.enabled("proactive-messaging"))):
                         if not self.stop_event.is_set():
                             self.logger.bind(tag=TAG).info("连接超时，准备关闭")
                             # 设置停止事件，防止重复处理

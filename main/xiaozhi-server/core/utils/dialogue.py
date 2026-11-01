@@ -25,6 +25,7 @@ class Message:
 class Dialogue:
     def __init__(self):
         self.dialogue: List[Message] = []
+        self.plugin_runtime = None
         # 获取当前时间
         self.current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -109,6 +110,8 @@ class Dialogue:
             # 每一轮重新计算时间。连接可能跨过午夜，不能把建连时的日期继续
             # 当成“今天”。角色包使用完整时间块，普通提示仍兼容旧占位符。
             now = datetime.now().astimezone()
+            if self.plugin_runtime is not None and self.plugin_runtime.enabled("time-awareness"):
+                now = self.plugin_runtime.now()
             full_prompt = full_prompt.replace(
                 "{{current_time}}", now.strftime("%H:%M")
             )
@@ -132,12 +135,15 @@ class Dialogue:
             )
             timezone_name = now.tzname() or str(now.utcoffset() or "本地时区")
             full_prompt = full_prompt.replace("{{current_timezone}}", timezone_name)
+            if "{{current_lunar_date}}" in full_prompt:
+                from core.utils.current_time import get_current_lunar_date
+                full_prompt = full_prompt.replace("{{current_lunar_date}}", get_current_lunar_date(now))
 
             # 填充记忆
             if memory_str is not None:
                 full_prompt = re.sub(
                     r"<memory>.*?</memory>",
-                    f"<memory>\n{memory_str}\n</memory>",
+                    lambda _: f"<memory>\n{memory_str}\n</memory>",
                     full_prompt,
                     flags=re.DOTALL,
                 )
@@ -167,6 +173,8 @@ class Dialogue:
             except:
                 pass
 
+            if self.plugin_runtime is not None:
+                full_prompt = self.plugin_runtime.augment_prompt(full_prompt)
             dialogue.append({"role": "system", "content": full_prompt})
 
         # 第二段：few-shot 示例（会话内不变）

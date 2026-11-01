@@ -196,6 +196,19 @@ async def get_correct_words(mac_address: str) -> Optional[Dict]:
         return None
 
 
+async def get_agent_plugins(mac_address: str) -> Dict:
+    return await ManageApiClient._instance._execute_async_request(
+        "POST", "/config/agent-plugins", json={"macAddress": mac_address}
+    )
+
+
+async def report_agent_plugins(mac_address: str, status: Dict):
+    return await ManageApiClient._instance._execute_async_request(
+        "POST", "/config/agent-plugins/status",
+        json={"macAddress": mac_address, "status": status},
+    )
+
+
 async def generate_and_save_chat_summary(session_id: str) -> Optional[Dict]:
     """生成并保存聊天记录总结"""
     try:

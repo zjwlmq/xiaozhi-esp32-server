@@ -222,6 +222,7 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         correctWordFileService.deleteMappingsByAgentId(agentId);
         agentTagService.deleteAgentTags(agentId);
         agentSnapshotService.deleteByAgentId(agentId);
+        agentDao.deletePluginCenterConfig(agentId);
         deleteById(agentId);
     }
 

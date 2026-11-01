@@ -5,6 +5,12 @@ Vue.use(VueRouter)
 
 const routes = [
   {
+    path: '/plugin-center',
+    name: 'PluginCenter',
+    component: () => import('../views/PluginCenter.vue'),
+    meta: { requiresAuth: true, title: '插件中心' }
+  },
+  {
     path: '/',
     name: 'welcome',
     component: function () {
@@ -229,7 +235,7 @@ VueRouter.prototype.push = function push(location) {
 }
 
 // 需要登录才能访问的路由
-const protectedRoutes = ['home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig', 'KnowledgeBaseManagement', 'KnowledgeFileUpload', 'AddressBookManagement']
+const protectedRoutes = ['home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig', 'KnowledgeBaseManagement', 'KnowledgeFileUpload', 'AddressBookManagement', 'PluginCenter']
 
 // 路由守卫
 router.beforeEach((to, from, next) => {

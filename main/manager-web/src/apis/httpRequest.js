@@ -27,6 +27,7 @@ function sendRequest() {
         _header: { 'content-type': 'application/json; charset=utf-8' },
         _url: '',
         _responseType: undefined, // 新增响应类型字段
+        _sensitive: false,
         'send'() {
             // 设置语言请求头
             const currentLang = i18n.locale;
@@ -58,7 +59,8 @@ function sendRequest() {
                 }
             }).catch((res) => {
                 // 打印失败响应
-                console.log('catch', res)
+                if (this._sensitive) console.log('请求失败', { status: res?.status })
+                else console.log('catch', res)
                 httpHandlerError(res, this._failCallback, this._networkFailCallback)
             })
             return this
@@ -73,6 +75,10 @@ function sendRequest() {
         },
         'networkFail'(callback) {
             this._networkFailCallback = callback
+            return this
+        },
+        'sensitive'(value = true) {
+            this._sensitive = value
             return this
         },
         'url'(url) {

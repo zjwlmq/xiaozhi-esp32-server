@@ -39,13 +39,13 @@ def get_current_weekday() -> str:
     return WEEKDAY_MAP[now.strftime("%A")]
 
 
-def get_current_lunar_date() -> str:
+def get_current_lunar_date(now=None) -> str:
     """
     获取农历日期字符串
     """
     try:
-        now = datetime.now()
-        today_lunar = cnlunar.Lunar(now, godType="8char")
+        now = now or datetime.now()
+        today_lunar = cnlunar.Lunar(now.replace(tzinfo=None), godType="8char")
         return "%s年%s%s" % (
             today_lunar.lunarYearCn,
             today_lunar.lunarMonthCn[:-1],

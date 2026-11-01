@@ -193,6 +193,7 @@ uploadfile
 !main/manager-mobile/**/.env*
 !main/manager-mobile/**/*.json
 !main/xiaozhi-server/**/*.json
+!main/manager-api/src/main/resources/plugin-center/catalog.json
 !main/digital-human/**/*.json
 !tools/nixi_rolepack/source_manifest.json
 !tools/nixi_rolepack/templates/pack.json

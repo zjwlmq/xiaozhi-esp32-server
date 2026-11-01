@@ -7,6 +7,7 @@ import { getAudioRecorder } from '../audio/recorder.js?v=0907';
 import { executeMcpTool, getMcpTools, setWebSocket as setMcpWebSocket } from '../mcp/tools.js?v=0907';
 import { webSocketConnect } from './ota-connector.js?v=0907';
 import { getStoredVoiceSettings } from '../../config/voice-settings.js?v=0907';
+import { appendPluginImage } from '../../ui/plugin-image.js?v=20261101';
 
 // WebSocket处理器类
 export class WebSocketHandler {
@@ -39,7 +40,8 @@ export class WebSocketHandler {
                 features: {
                     mcp: true,
                     emoji: config.emojiEnabled,
-                    voice_settings: true
+                    voice_settings: true,
+                    plugin_images: true
                 },
                 voice_settings: getStoredVoiceSettings()
             };
@@ -113,6 +115,8 @@ export class WebSocketHandler {
             uiController.startAIChatSession();
         } else if (message.type === 'voice_settings') {
             this.onVoiceSettingsMessage?.(message);
+        } else if (message.type === 'plugin_image') {
+            appendPluginImage(message);
         } else if (message.type === 'tts') {
             this.handleTTSMessage(message);
         } else if (message.type === 'audio') {

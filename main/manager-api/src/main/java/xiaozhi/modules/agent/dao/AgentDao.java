@@ -10,6 +10,9 @@ import xiaozhi.modules.agent.vo.AgentInfoVO;
 
 @Mapper
 public interface AgentDao extends BaseDao<AgentEntity> {
+    @org.apache.ibatis.annotations.Delete("DELETE FROM ai_agent_extension_config WHERE agent_id=#{agentId}")
+    int deletePluginCenterConfig(@Param("agentId") String agentId);
+
     /**
      * 获取智能体的设备数量
      * 

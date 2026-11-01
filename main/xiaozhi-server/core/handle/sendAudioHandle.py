@@ -1,4 +1,5 @@
 import json
+import hashlib
 import time
 import asyncio
 import opuslib_next
@@ -310,6 +311,12 @@ async def send_tts_message(conn: "ConnectionHandler", state, text=None):
 
     # 发送消息到客户端
     await conn.websocket.send(json.dumps(message))
+    if state == "sentence_start" and text and getattr(conn, "plugin_runtime", None):
+        try:
+            event_id = str(conn.sentence_id) + ":" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+            conn.plugin_runtime.record_sent(event_id, conn.sentence_id)
+        except Exception as plugin_error:
+            conn.logger.bind(tag=TAG).warning(f"插件发送时间记录失败: {type(plugin_error).__name__}")
 
 
 async def send_stt_message(conn: "ConnectionHandler", text):

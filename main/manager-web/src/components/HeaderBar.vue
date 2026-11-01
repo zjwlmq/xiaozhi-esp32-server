@@ -26,6 +26,10 @@
           <span class="nav-text">{{ $t("header.smartManagement") }}</span>
         </div>
         <!-- 普通用户显示音色克隆 -->
+        <div class="equipment-management" :class="{ 'active-tab': $route.path === '/plugin-center' }" @click="$router.push('/plugin-center')">
+          <i class="el-icon-connection" style="font-size: 20px; margin-right: 8px" />
+          <span class="nav-text">插件中心</span>
+        </div>
         <div v-if="!userInfo.superAdmin && featureStatus.voiceClone" class="equipment-management"
           :class="{ 'active-tab': $route.path === '/voice-clone-management' }"
           @click="handleRouter('voiceCloneManagement')">

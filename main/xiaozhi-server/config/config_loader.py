@@ -61,6 +61,8 @@ async def get_config_from_api_async(config):
         raise Exception("Failed to fetch server config from API")
 
     config_data["read_config_from_api"] = True
+    # Network access exceptions are set by the server operator, never by an agent.
+    config_data["plugin_center_image_allowed_origins"] = config.get("plugin_center_image_allowed_origins", [])
     config_data["manager-api"] = {
         "url": config["manager-api"].get("url", ""),
         "secret": config["manager-api"].get("secret", ""),
