@@ -27,6 +27,7 @@ SERVER = ROOT / "main/xiaozhi-server"
 sys.path.insert(0, str(SERVER))
 from core.channels.qq.bridge import QQBridge
 from core.channels.qq.settings import Settings
+from core.channels.qq.onebot import OneBotError
 from core.channels.qq.session import NativeSession
 from core.channels.qq.text_tts import TextTTS
 from core.channels.qq.media import download, outbound_segments, pcm_audio
@@ -135,6 +136,20 @@ class FakeServer:
 
 
 class SettingsTests(unittest.TestCase):
+    def test_websocket_token_inherits_or_can_be_separate_or_empty(self):
+        from core.channels.qq.onebot import OneBot
+        shared = OneBot(Settings.parse(config(access_token="http-token")))
+        self.assertEqual(shared.headers, shared.websocket_headers)
+        split = OneBot(Settings.parse(config(access_token="http-token", websocket_access_token="ws-token")))
+        self.assertEqual(split.headers, {"Authorization": "Bearer http-token"})
+        self.assertEqual(split.websocket_headers, {"Authorization": "Bearer ws-token"})
+        unsigned = OneBot(Settings.parse(config(access_token="http-token", websocket_access_token="")))
+        self.assertEqual(unsigned.websocket_headers, {})
+        for field in ('access_token', 'websocket_access_token'):
+            for value in (123, "bad\r\nheader"):
+                with self.assertRaises(ValueError):
+                    Settings.parse(config(**{field:value}))
+
     def test_disabled_and_missing_secret(self):
         self.assertIsNone(Settings.parse({}))
         with self.assertRaises(ValueError):
@@ -168,6 +183,8 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         self.sent, self.actions = [], []
         self.fail_sends = False
         self.login_id = 100001
+        self.ws_login_id = 100001
+        self.ws_token = "local-test-token"
         self.fake_server = FakeServer()
         app = web.Application()
         app.router.add_post("/{action}", self.onebot_action)
@@ -175,12 +192,15 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
             return web.Response(body=PNG, content_type="image/png")
         app.router.add_get("/media.png", picture)
         async def websocket_events(request):
-            self.assertEqual(request.headers.get("Authorization"), "Bearer local-test-token")
+            self.assertEqual(request.headers.get("Authorization"), "Bearer " + self.ws_token if self.ws_token else None)
             ws = web.WebSocketResponse()
             await ws.prepare(request)
             await ws.send_json(event(number=800, text="来自正向WS"))
-            async for _ in ws:
-                pass
+            async for frame in ws:
+                message = json.loads(frame.data)
+                self.assertEqual(message.get("action"), "get_login_info")
+                await ws.send_json({"status":"ok", "retcode":0, "echo":message.get("echo"),
+                                    "data":{"user_id":self.ws_login_id}})
             return ws
         async def ota(request):
             self.assertEqual(request.headers["Device-Id"], self.settings.routes["alice"].device_id)
@@ -388,6 +408,42 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         await self.drain()
         self.assertEqual(len(self.sent), 17)
 
+    async def test_forward_websocket_uses_its_own_token_http_keeps_http_token(self):
+        await self.client.close()
+        self.ws_token = "separate-ws-secret"
+        self.settings.websocket_access_token = self.ws_token
+        self.settings.websocket_url = str(self.onebot_server.make_url("/events")).replace("http:", "ws:")
+        await self.start_bridge()
+        for _ in range(100):
+            if self.sent:
+                break
+            await asyncio.sleep(0.02)
+        self.assertEqual(self.sent[0][1]["user_id"],200001)
+        body = await (await self.client.get('/xiaozhi/qq/status',headers={'Authorization':'Bearer '+KEY})).text()
+        self.assertNotIn(self.ws_token,body)
+        await self.drain()
+
+    async def test_websocket_login_probe_ignores_chat_and_checks_identity(self):
+        self.ws_token = "probe-ws-secret"
+        self.settings.websocket_access_token = self.ws_token
+        self.settings.websocket_url = str(self.onebot_server.make_url('/events')).replace('http:','ws:')
+        await self.bridge.onebot.verify_account()
+        await self.bridge.onebot.verify_websocket_account()
+        self.assertFalse(self.sent)
+        self.assertFalse(self.fake_server.model_calls)
+        self.ws_login_id = 999999
+        with self.assertRaises(OneBotError):
+            await self.bridge.onebot.verify_websocket_account()
+        self.assertFalse(self.sent)
+
+    async def test_websocket_can_explicitly_have_no_token(self):
+        self.ws_token = ''
+        self.settings.websocket_access_token = ''
+        self.settings.websocket_url = str(self.onebot_server.make_url('/events')).replace('http:','ws:')
+        await self.bridge.onebot.verify_account()
+        await self.bridge.onebot.verify_websocket_account()
+        self.assertFalse(self.sent)
+
     async def test_prepare_returns_binding_code_only_to_authenticated_operator(self):
         session = self.bridge.sessions["alice"]
         session.config = {"read_config_from_api": True, "manager-api": {"url": str(self.onebot_server.make_url("/xiaozhi"))}}
@@ -485,6 +541,24 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
 
 
 class MediaAndConfigTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cli_reads_separate_tokens_from_private_stdin(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('qq_cli_tokens',SERVER/'tools/qq_bridge.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        args = SimpleNamespace(tokens_stdin=True, access_token_env=None,ws_access_token_env=None)
+        payload = {'access_token':'stdin-http-secret','websocket_access_token':'stdin-ws-secret'}
+        with patch.object(sys,'stdin',io.StringIO(json.dumps(payload))):
+            self.assertEqual(module.read_init_tokens(args),('stdin-http-secret','stdin-ws-secret'))
+        with patch.object(sys,'stdin',io.StringIO(json.dumps({'access_token':'stdin-http-secret'}))):
+            self.assertEqual(module.read_init_tokens(args),('stdin-http-secret',None))
+        with patch.object(sys,'stdin',io.StringIO('{"access_token":123}')):
+            with self.assertRaisesRegex(ValueError,'JSON格式无效'):
+                module.read_init_tokens(args)
+        args.access_token_env = 'SOME_TOKEN_ENV'
+        with self.assertRaises(ValueError):
+            module.read_init_tokens(args)
+
     @unittest.skipUnless(shutil.which("ffmpeg"), "ffmpeg is not installed")
     async def test_real_ffmpeg_decodes_wav_to_16khz_pcm(self):
         data = io.BytesIO()

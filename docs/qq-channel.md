@@ -48,6 +48,10 @@ python tools/qq_bridge.py status
 python tools/qq_bridge.py prepare --route friend
 ```
 
+SnowLuma允许HTTP和正向WebSocket分别设置Access Token。配置里的`access_token`仅用于HTTP；新增的`websocket_access_token`用于正向WS。省略或设置为`null`时沿用HTTP token，明确设置为`""`时不发送WS认证头。两个token不同时必须分别配置。手工初始化可用`--access-token-env`和`--ws-access-token-env`从指定环境变量读取；也可用`init --tokens-stdin`从标准输入读仅含`access_token`、`websocket_access_token`的私有JSON，避免把值放入命令行。
+
+`python tools/qq_bridge.py check --websocket`会同时检查HTTP与WS登录账号，只发`get_login_info`控制请求，并忽略收到的聊天事件，不调用模型或发送QQ消息。
+
 `check` 验证 OneBot HTTP 登录账号；`prepare` 通过现有 OTA 注册虚拟设备并返回 `activation_code`。到智控台选中目标智能体 → 添加／绑定设备 → 输入激活码。随后从已放行的测试 QQ 给机器人发一句话。以上三个工具命令本身都不会发送 QQ 消息。
 
 在智能体插件中心打开“时间感知”（时区 Asia/Shanghai），并按需启用记忆优化、生图等。主动消息建议在正常回复和人格效果确认后再打开。
@@ -116,6 +120,25 @@ python3 "$QQ_SRC/deploy/update-plugin-compose-json.py" --apply \
   --project migration-live-20260923-xiaozhi \
   --file /root/migration/live/prepared/apps/xiaozhi/compose.json
 ```
+
+若此次仅更新Python QQ适配器，可在`--check`和`--apply`命令上加`--server-only`。该模式沿用现有智控台镜像，备份后只重建并重启Python服务；回滚也只重启Python。它不运行管理端构建和数据库迁移步骤，因此应先具有已正常工作的插件中心版本。
+
+### 现有SnowLuma的自动连接
+
+仓库提供`deploy/configure-qq-compose-json.py`，用于小智与现有`qqfish-snowluma`不在同一网络、且HTTP/WS token不同的情形。先更新到包含独立WS密钥支持的Python代码，再运行：
+
+```bash
+python3 "$QQ_SRC/deploy/configure-qq-compose-json.py" \
+  --project migration-live-20260923-xiaozhi \
+  --file /root/migration/live/prepared/apps/xiaozhi/compose.json \
+  --self-id 100001 --peer-id 200001
+```
+
+上例QQ号为占位示例。默认只读检查；加`--apply`后工具会从现有`qqfish-app`内部发现当前账号的HTTP与WS密钥，经进程管道传给小智的私有配置文件。密钥不会进入终端输出或命令行参数；已有配置只有完全匹配目标时才复用，不覆盖其他账号或路由。
+
+工具将`qqfish-private`作为外部网络写入小智Compose，同时保留原默认网络与原有显式网络配置，网关地址使用实际容器名`qqfish-snowluma`。先在当前小智容器中验证HTTP及WS账号，再重建小智Python容器并检查接口。它不修改SnowLuma和qqfish-app的配置，不注册智能体或发送QQ消息。失败时保留Compose备份，并尝试撤回本次网络改动及新建QQ配置；凭据的失败备份仍只保存在持久化data目录。
+
+可通过`--gateway-container`、`--credential-container`、`--bridge-dir`、`--network`适配实际名称。准备工作完成后，再运行`prepare --route friend`获取设备激活码，到目标智能体绑定。若旧桥也处理同一个测试QQ，需先为该会话确定唯一处理方，再发测试消息。
 
 在服务器更新后，可以用以下命令只读检查工具是否随镜像安装：
 

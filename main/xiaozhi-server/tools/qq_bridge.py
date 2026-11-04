@@ -27,18 +27,44 @@ def write_new_config(path, raw):
     return settings
 
 
+def read_init_tokens(args):
+    if args.tokens_stdin:
+        if args.access_token_env or args.ws_access_token_env:
+            raise ValueError("--tokens-stdin 不能与密钥环境变量参数同时使用")
+        try:
+            value = sys.stdin.read(65537)
+            if len(value) > 65536:
+                raise ValueError()
+            values = json.loads(value)
+            if (not isinstance(values, dict) or set(values) - {"access_token", "websocket_access_token"}
+                    or not isinstance(values.get("access_token"), str)
+                    or (values.get("websocket_access_token") is not None
+                        and not isinstance(values["websocket_access_token"], str))):
+                raise ValueError()
+            return values["access_token"], values.get("websocket_access_token")
+        except (ValueError, TypeError):
+            raise ValueError("标准输入的密钥JSON格式无效；未输出或保存输入内容") from None
+    if args.access_token_env and args.access_token_env not in os.environ:
+        raise ValueError("指定的 OneBot HTTP token 环境变量不存在")
+    if args.ws_access_token_env and args.ws_access_token_env not in os.environ:
+        raise ValueError("指定的 OneBot WebSocket token 环境变量不存在")
+    token = os.environ[args.access_token_env] if args.access_token_env else getpass.getpass("OneBot HTTP Access Token（输入不回显，可留空）：")
+    ws_token = os.environ[args.ws_access_token_env] if args.ws_access_token_env else None
+    return token, ws_token
+
+
 async def run(args):
     path = Path(args.config)
     if args.command == "init":
         if path.exists():
             raise ValueError("配置已存在，未覆盖。请编辑 data/.qq-bridge.yaml 后重启小智服务。")
-        token = os.environ.get(args.access_token_env, "") if args.access_token_env else getpass.getpass("OneBot Access Token（输入不回显，可留空）：")
-        if args.access_token_env and args.access_token_env not in os.environ:
-            raise ValueError("指定的 OneBot token 环境变量不存在")
+        token, ws_token = read_init_tokens(args)
         raw = {"enabled": True, "self_id": args.self_id, "api_key": secrets.token_urlsafe(32),
                "webhook_secret": secrets.token_urlsafe(32), "http_url": args.http_url,
                "websocket_url": args.ws_url, "access_token": token, "media_allowed_origins": [],
                "routes": [{"id": "friend", "kind": "private", "peer_id": args.peer_id, "reply_mode": "text"}]}
+        if ws_token is not None:
+            raw["websocket_access_token"] = ws_token
         settings = write_new_config(path, raw)
         print("已保存私有配置：" + str(path))
         print("QQ 会话的设备编号：" + settings.routes["friend"].device_id)
@@ -53,7 +79,10 @@ async def run(args):
         await client.start()
         try:
             await client.verify_account()
-            print("OneBot HTTP 连接正常，登录 QQ 与 self_id 匹配。未发送 QQ 消息。")
+            if args.websocket:
+                await client.verify_websocket_account()
+            print("OneBot " + ("HTTP / WebSocket" if args.websocket else "HTTP")
+                  + " 连接正常，登录 QQ 与 self_id 匹配。未发送 QQ 消息。")
         finally:
             await client.close()
         return
@@ -78,8 +107,11 @@ def main():
     init.add_argument("--http-url", required=True, help="小智容器可访问的 OneBot HTTP API")
     init.add_argument("--ws-url", default="", help="OneBot 正向 WebSocket URL")
     init.add_argument("--access-token-env", help="从指定环境变量取 OneBot token；默认交互输入")
+    init.add_argument("--ws-access-token-env", help="从指定环境变量取独立的正向WS token；省略则沿用HTTP token")
+    init.add_argument("--tokens-stdin", action="store_true", help="从标准输入读HTTP / WS密钥JSON；用于私有自动配置")
     commands.add_parser("status", help="查看小智 QQ 路由状态")
-    commands.add_parser("check", help="只读检查 OneBot HTTP 和登录账号")
+    commands.add_parser("check", help="只读检查 OneBot 和登录账号").add_argument(
+        "--websocket", action="store_true", help="同时验证正向WS登录账号；不转发收到的聊天事件")
     commands.add_parser("prepare", help="生成/查询智控台设备激活码；不向 QQ 发送").add_argument("--route", default="friend")
     args = parser.parse_args()
     try:

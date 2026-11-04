@@ -44,6 +44,8 @@ class Settings:
     state_path: str = "data/qq-bridge/events.sqlite3"
     turn_timeout: int = 180
     max_event_age: int = 300
+    # None preserves the original shared-token behaviour; "" means unauthenticated WS.
+    websocket_access_token: str | None = field(default=None, repr=False)
 
     @classmethod
     def parse(cls, raw):
@@ -76,11 +78,18 @@ class Settings:
         if not 1 <= len(routes) <= 64:
             raise ValueError("Configure between 1 and 64 explicit QQ routes")
         ws = raw.get("websocket_url", "")
+        http_token = raw.get("access_token", "")
+        if not isinstance(http_token, str) or '\r' in http_token or '\n' in http_token:
+            raise ValueError("qq_bridge.access_token must be a single-line string")
+        ws_token = raw.get("websocket_access_token")
+        if ws_token is not None and (not isinstance(ws_token, str) or '\r' in ws_token or '\n' in ws_token):
+            raise ValueError("qq_bridge.websocket_access_token must be a single-line string or null")
         origins = tuple(endpoint(x, ("https", "http")) for x in raw.get("media_allowed_origins", []))
         if any(urlsplit(x).path not in ("", "/") for x in origins):
             raise ValueError("media_allowed_origins must contain exact origins, without paths")
         return cls(self_id, key, endpoint(raw.get("http_url", ""), ("http", "https")),
-                   str(raw.get("access_token", "")), endpoint(ws, ("ws", "wss")) if ws else "",
+                   http_token, endpoint(ws, ("ws", "wss")) if ws else "",
                    secret, origins, routes, str(raw.get("state_path", "data/qq-bridge/events.sqlite3")),
                    max(30, min(600, int(raw.get("turn_timeout", 180)))),
-                   max(30, min(600, int(raw.get("max_event_age", 300)))))
+                   max(30, min(600, int(raw.get("max_event_age", 300)))),
+                   websocket_access_token=ws_token)

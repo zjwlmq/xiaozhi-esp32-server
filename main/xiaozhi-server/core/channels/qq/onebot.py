@@ -2,6 +2,7 @@
 import asyncio
 import json
 import time
+import uuid
 
 import aiohttp
 
@@ -23,6 +24,13 @@ class OneBot:
     @property
     def headers(self):
         token = self.settings.access_token
+        return {"Authorization": "Bearer " + token} if token else {}
+
+    @property
+    def websocket_headers(self):
+        token = self.settings.websocket_access_token
+        if token is None:
+            token = self.settings.access_token
         return {"Authorization": "Bearer " + token} if token else {}
 
     async def call(self, action, params=None):
@@ -62,11 +70,38 @@ class OneBot:
             raise OneBotError("OneBot did not acknowledge message delivery")
         return str(result["message_id"])
 
+    async def verify_websocket_account(self):
+        """Read login information over forward WS, ignoring all chat events."""
+        if not self.settings.websocket_url:
+            raise OneBotError("Forward WebSocket URL is not configured")
+        echo = "xiaozhi-check-" + uuid.uuid4().hex
+        async with self.http.ws_connect(self.settings.websocket_url, headers=self.websocket_headers,
+                                        heartbeat=25, max_msg_size=256 * 1024) as ws:
+            await ws.send_json({"action": "get_login_info", "params": {}, "echo": echo})
+            async def receive_login():
+                async for frame in ws:
+                    if frame.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        result = json.loads(frame.data)
+                    except (ValueError, TypeError):
+                        continue
+                    if not isinstance(result, dict) or result.get("echo") != echo:
+                        continue
+                    account = result.get("data")
+                    if (result.get("status") != "ok" or result.get("retcode") != 0
+                            or not isinstance(account, dict)
+                            or str(account.get("user_id")) != self.settings.self_id):
+                        raise OneBotError("OneBot WebSocket account does not match configured self_id")
+                    return
+                raise OneBotError("OneBot WebSocket closed before login verification")
+            await asyncio.wait_for(receive_login(), timeout=15)
+
     async def listen(self, consume, disconnected):
         while True:
             try:
                 await self.verify_account()
-                async with self.http.ws_connect(self.settings.websocket_url, headers=self.headers,
+                async with self.http.ws_connect(self.settings.websocket_url, headers=self.websocket_headers,
                                                 heartbeat=25, max_msg_size=256 * 1024) as ws:
                     async for frame in ws:
                         if frame.type == aiohttp.WSMsgType.TEXT:

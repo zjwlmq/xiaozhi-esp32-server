@@ -7,7 +7,8 @@ qq_bridge:
   webhook_secret: ""                        # Optional OneBot HTTP POST HMAC secret
   http_url: "http://qqfish-snowluma:3000"     # Actual OneBot HTTP API; not the WebUI port
   websocket_url: "ws://qqfish-snowluma:3001"  # Forward WS; leave empty for HTTP POST events
-  access_token: ""                          # OneBot access token
+  access_token: ""                          # OneBot HTTP access token
+  websocket_access_token: null               # null/omitted inherits HTTP; "" disables WS auth
   turn_timeout: 180
   max_event_age: 300
   media_allowed_origins: []                  # Exact operator-approved origins for HTTP/private media

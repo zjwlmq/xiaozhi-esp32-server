@@ -237,23 +237,26 @@ exec mysqldump --user=root --single-transaction --routines --triggers --events \
             time.sleep(5)
         raise RuntimeError('新服务未就绪：' + service)
 
-    def apply(self):
+    def apply(self, server_only=False):
         initial = self.inspect()
         if not (self.source / 'main/xiaozhi-server/core/plugins/catalog.json').is_file():
             raise RuntimeError('需要插件中心版本的完整源码；可复用已解压的源码目录。')
-        web_recipe = web_dockerfile(self.source)
+        web_recipe = None if server_only else web_dockerfile(self.source)
         release = 'plugins-' + time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + str(os.getpid())
         old_server = SERVER + ':rollback-' + release
         old_web = WEB + ':rollback-' + release
-        new_server, new_web = SERVER + ':' + release, WEB + ':' + release
+        new_server = SERVER + ':' + release
+        new_web = initial['raw']['services'][WEB]['image'] if server_only else WEB + ':' + release
         docker(['image', 'tag', initial['containers'][SERVER]['Image'], old_server])
-        docker(['image', 'tag', initial['containers'][WEB]['Image'], old_web])
+        if not server_only:
+            docker(['image', 'tag', initial['containers'][WEB]['Image'], old_web])
         print('构建 Python 镜像：沿用现有 CPU 依赖，只补充插件依赖和应用代码。', flush=True)
         docker(['build', '--pull=false', '--build-arg', 'PLUGIN_BASE_IMAGE=' + old_server,
                 '-f', '-', '-t', new_server, str(self.source)], capture=False, input_text=SERVER_DOCKERFILE)
-        print('构建管理端镜像（前端单进程编译）。', flush=True)
-        docker(['build', '--pull=false', '-f', '-', '-t', new_web, str(self.source)],
-               capture=False, input_text=web_recipe)
+        if not server_only:
+            print('构建管理端镜像（前端单进程编译）。', flush=True)
+            docker(['build', '--pull=false', '-f', '-', '-t', new_web, str(self.source)],
+                   capture=False, input_text=web_recipe)
         self.unchanged(initial)
         parent = self.directory / 'backups'
         if parent.is_symlink():
@@ -268,11 +271,13 @@ exec mysqldump --user=root --single-transaction --routines --triggers --events \
         self.backup_database(initial['containers'][DB]['Id'], backup / 'database.sql.gz')
         self.unchanged(initial)
         updated = json_bytes(with_images(initial['raw'], new_server, new_web))
-        rollback = json_bytes(with_images(initial['raw'], old_server, old_web))
+        rollback = json_bytes(with_images(initial['raw'], old_server,
+                              initial['raw']['services'][WEB]['image'] if server_only else old_web))
         (backup / 'compose.rollback.json').write_bytes(rollback)
         (backup / 'rollback-state.json').write_bytes(json_bytes({
             'project': self.project, 'file': str(self.file),
-            'allowed_hashes': [digest(initial['original']), digest(updated), digest(rollback)]}))
+            'allowed_hashes': [digest(initial['original']), digest(updated), digest(rollback)],
+            'services': [SERVER] if server_only else [WEB, SERVER]}))
         shutil.copyfile(str(Path(__file__).resolve()), str(backup / 'updater.py'))
         rollback_command = 'python3 {} --rollback {}'.format(
             shlex.quote(str(backup / 'updater.py')), shlex.quote(str(backup)))
@@ -282,15 +287,16 @@ exec mysqldump --user=root --single-transaction --routines --triggers --events \
             docker([*self.compose, 'config', '--quiet'])
             if self.file.read_bytes() != updated:
                 raise RuntimeError('切换前配置被其他操作修改，已停止。')
-            self.restart([WEB])
-            web_id = self.wait_ready(WEB)
-            table = docker(['exec', initial['containers'][DB]['Id'], 'sh', '-c', '''set -eu
+            if not server_only:
+                self.restart([WEB])
+                web_id = self.wait_ready(WEB)
+                table = docker(['exec', initial['containers'][DB]['Id'], 'sh', '-c', '''set -eu
 export MYSQL_PWD="${MYSQL_ROOT_PASSWORD:?}"
 exec mysql --user=root --batch --skip-column-names "${MYSQL_DATABASE:-xiaozhi_esp32_server}" -e "SHOW TABLES LIKE 'ai_agent_extension_config';"
 ''']).stdout.strip()
-            if table != 'ai_agent_extension_config':
-                raise RuntimeError('插件配置表未创建，请检查 Liquibase 日志。')
-            docker(['exec', web_id, 'test', '-s', '/usr/share/nginx/html/digital-human/js/ui/plugin-image.js'])
+                if table != 'ai_agent_extension_config':
+                    raise RuntimeError('插件配置表未创建，请检查 Liquibase 日志。')
+                docker(['exec', web_id, 'test', '-s', '/usr/share/nginx/html/digital-human/js/ui/plugin-image.js'])
             if self.file.read_bytes() != updated:
                 raise RuntimeError('切换期间配置被其他操作修改，已停止。')
             self.restart([SERVER])
@@ -304,20 +310,24 @@ exec mysql --user=root --batch --skip-column-names "${MYSQL_DATABASE:-xiaozhi_es
                       file=sys.stderr, flush=True)
             raise
         docker([*self.compose, 'ps', SERVER, WEB], capture=False)
-        print('更新完成。Ctrl+F5 刷新智控台，进入“插件中心”。备份：' + str(backup), flush=True)
+        print(('Python 服务更新完成。备份：' if server_only else
+               '更新完成。Ctrl+F5 刷新智控台，进入“插件中心”。备份：') + str(backup), flush=True)
 
 
 def restore(backup):
     backup = Path(backup).resolve()
     state = json.loads((backup / 'rollback-state.json').read_text(encoding='utf-8'))
+    services = state.get('services', [WEB, SERVER])
+    if services not in ([SERVER], [WEB, SERVER]):
+        raise RuntimeError('回滚服务列表无效。')
     installation = Installation(state['project'], state['file'])
     if digest(installation.file.read_bytes()) not in state['allowed_hashes']:
         raise RuntimeError('配置后来被修改，已停止自动覆盖；请结合备份人工恢复。')
     atomic_write(installation.file, (backup / 'compose.rollback.json').read_bytes())
     docker([*installation.compose, 'config', '--quiet'])
-    installation.restart([WEB, SERVER])
-    installation.wait_ready(WEB, plugins=False)
-    installation.wait_ready(SERVER, plugins=False)
+    installation.restart(services)
+    for service in services:
+        installation.wait_ready(service, plugins=False)
     print('已恢复原应用镜像；数据库备份保留，未自动覆盖数据库。', flush=True)
 
 
@@ -329,6 +339,7 @@ def main():
     mode.add_argument('--rollback', metavar='BACKUP_DIRECTORY')
     parser.add_argument('--project')
     parser.add_argument('--file', dest='config_file')
+    parser.add_argument('--server-only', action='store_true', help='仅重建和更新Python镜像；不更改智控台镜像')
     args = parser.parse_args()
     if not args.rollback and (not args.project or not args.config_file):
         parser.error('需要 --project 和 --file')
@@ -351,7 +362,7 @@ def main():
         else:
             installation = Installation(args.project, args.config_file)
             if args.apply:
-                installation.apply()
+                installation.apply(server_only=args.server_only)
             else:
                 info = installation.inspect()
                 print('项目：' + args.project)

@@ -197,6 +197,32 @@ class MigrationUpdateTests(unittest.TestCase):
         self.assertEqual(self.file.read_bytes(), self.before)
         self.assertEqual(self.restarts, [])
 
+    def test_server_only_preserves_web_image_and_only_restarts_python(self):
+        with redirect_stdout(self.output), redirect_stderr(self.output):
+            self.installation.apply(server_only=True)
+        self.assert_only_images_changed()
+        actual = json.loads(self.file.read_text(encoding='utf-8'))
+        self.assertEqual(actual['services'][WEB],self.config['services'][WEB])
+        self.assertEqual(self.restarts,[[SERVER]])
+        self.assertEqual(len(self.recipes),1)
+        backup = next((self.directory/'backups').iterdir())
+        self.assertEqual(json.loads((backup/'rollback-state.json').read_text())['services'],[SERVER])
+        self.assertTrue((backup/'database.sql.gz').is_file())
+
+    def test_server_only_failure_rolls_back_python_without_restarting_web(self):
+        original_wait = UPDATER.Installation.wait_ready
+        def wait(instance,service,plugins=True):
+            if service==SERVER and plugins:
+                raise RuntimeError('simulated Python startup failure')
+            return original_wait(instance,service,plugins=plugins)
+        with patch.object(UPDATER.Installation,'wait_ready',new=wait):
+            with redirect_stdout(self.output),redirect_stderr(self.output):
+                with self.assertRaisesRegex(RuntimeError,'Python startup failure'):
+                    self.installation.apply(server_only=True)
+        self.assertEqual(self.restarts,[[SERVER],[SERVER]])
+        actual = json.loads(self.file.read_text(encoding='utf-8'))
+        self.assertEqual(actual['services'][WEB],self.config['services'][WEB])
+
     def test_build_failure_never_changes_config_or_restarts(self):
         self.build_error = True
         with self.assertRaisesRegex(RuntimeError, 'build failure'):
