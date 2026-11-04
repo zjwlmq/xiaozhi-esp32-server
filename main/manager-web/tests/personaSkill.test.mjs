@@ -4,18 +4,26 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const compiler = require('vue-template-compiler');
+const { zipSync, strToU8 } = require('fflate');
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const helperSource = await read('../src/utils/personaSkill.js');
-const helpers = await import(`data:text/javascript;base64,${Buffer.from(helperSource).toString('base64')}`);
+const zipSource = await read('../src/utils/personaSkillZip.js');
+const fflateUrl = new URL('./esm/index.mjs', pathToFileURL(require.resolve('fflate/package.json'))).href;
+const zipModuleUrl = `data:text/javascript;base64,${Buffer.from(zipSource.replace("'fflate'", JSON.stringify(fflateUrl))).toString('base64')}`;
+const helpers = await import(`data:text/javascript;base64,${Buffer.from(helperSource.replaceAll("'./personaSkillZip'", JSON.stringify(zipModuleUrl))).toString('base64')}`);
 const componentSource = await read('../src/components/PersonaSkillImport.vue');
 const pageSource = await read('../src/views/roleConfig.vue');
 const messagesSource = await read('../src/i18n/personaSkill.js');
 const { default: messages } = await import(`data:text/javascript;base64,${Buffer.from(messagesSource).toString('base64')}`);
 const longPrompt = '# 人格与共同记忆\n' + '依据历史聊天，先回应眼前的问题。🙂\n'.repeat(250) + '\n结尾规则完整保留。\n';
 const file = (text, name = 'SKILL.md') => new File([text], name);
+const zipped = (files, name = 'persona.zip', options) => file(zipSync(Object.fromEntries(
+  Object.entries(files).map(([path, text]) => [path, typeof text === 'string' ? strToU8(text) : text]),
+), options), name);
 
 function loadComponent(source, extra = {}) {
   const script = compiler.parseComponent(source).script.content
@@ -106,13 +114,123 @@ test('rejects invalid UTF-8, NUL, isolated surrogates and empty persona content'
   }
 });
 
-test('rejects large files before reading and does not interpret archives as text', async () => {
+test('rejects large text files before reading and unsupported archive types', async () => {
   let readAttempted = false;
   await assert.rejects(helpers.readPersonaSkill({ name: 'large.md', size: 262145, arrayBuffer: () => { readAttempted = true; } }), { code: 'fileTooLarge' });
   assert.equal(readAttempted, false);
-  for (const name of ['persona.skill', 'persona.zip', 'persona.tar.gz', 'script.js']) {
+  for (const name of ['persona.7z', 'persona.rar', 'persona.tar.gz', 'script.js']) {
     await assert.rejects(helpers.readPersonaSkill(file('content', name)), { code: 'unsupportedFile' });
   }
+});
+
+test('ZIP prefers the prepared runtime text and verifies matching JSON without duplicating source copies', async () => {
+  const parsed = await helpers.readPersonaSkill(zipped({
+    '角色/full-system-prompt.txt': longPrompt,
+    '角色/agent-patch.json': JSON.stringify({ systemPrompt: longPrompt, llmModelId: 'foreign' }),
+    '角色/source/SKILL.md': 'original source version',
+    '角色/source/persona.md': 'original persona copy',
+    '角色/README.md': 'not part of the persona',
+    '角色/tools/import.py': 'must never execute',
+  }));
+  assert.equal(parsed.prompt, longPrompt);
+  assert.equal(parsed.archive, true);
+  assert.equal(parsed.strategy, 'prepared');
+  assert.deepEqual(parsed.usedFiles, ['角色/full-system-prompt.txt']);
+  assert.deepEqual(parsed.verifiedFiles, ['角色/agent-patch.json']);
+  assert.equal(parsed.ignoredFiles, 4);
+  assert.equal(parsed.llmModelId, undefined);
+});
+
+test('ZIP reads a JSON-only persona without applying other configuration', async () => {
+  const parsed = await helpers.readPersonaSkill(zipped({ 'agent-patch.json': JSON.stringify({ systemPrompt: longPrompt, summaryMemory: 'foreign' }) }));
+  assert.equal(parsed.prompt, longPrompt);
+  assert.equal(parsed.summaryMemory, undefined);
+  assert.deepEqual(parsed.usedFiles, ['agent-patch.json']);
+});
+
+test('.skill packages combine SKILL.md with separate persona and memories from the same directory', async () => {
+  const parsed = await helpers.readPersonaSkill(zipped({
+    'persona/SKILL.md': '---\nname: test\n---\n请根据下列档案回应。',
+    'persona/persona.md': '# 人格\n先接话，再简短追问。',
+    'persona/memories.md': '# 共同记忆\n对方的工作是前端开发。',
+    'persona/knowledge/chats.json': '[{"raw":"archive"}]',
+  }, 'persona.skill'));
+  assert.match(parsed.prompt, /请根据下列档案回应/);
+  assert.match(parsed.prompt, /先接话，再简短追问/);
+  assert.match(parsed.prompt, /对方的工作是前端开发/);
+  assert.equal(parsed.strippedFrontmatter, true);
+  assert.deepEqual(parsed.usedFiles, ['persona/SKILL.md', 'persona/persona.md', 'persona/memories.md']);
+  assert.equal(parsed.ignoredFiles, 1);
+  assert.doesNotMatch(parsed.prompt, /raw|archive/);
+});
+
+test('companions already inside SKILL.md are reported rather than inserted twice', async () => {
+  const persona = '# 人格\n保持自然表达。', memory = '# 记忆\n一起聊过晚餐。';
+  const body = persona + '\n\n' + memory;
+  const parsed = await helpers.readPersonaSkill(zipped({ 'SKILL.md': body, 'persona.md': persona, 'memories.md': memory }));
+  assert.equal(parsed.prompt, body);
+  assert.deepEqual(parsed.usedFiles, ['SKILL.md']);
+  assert.deepEqual(parsed.alreadyIncludedFiles, ['persona.md', 'memories.md']);
+});
+
+test('compiled TXT and JSON with different versions cannot be silently selected', async () => {
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'full-system-prompt.txt': longPrompt, 'agent-patch.json': JSON.stringify({ systemPrompt: 'different' }) })), { code: 'conflictingPrompts' });
+});
+
+test('multiple independent personas or a package without an entry point are rejected', async () => {
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'one/SKILL.md': 'one', 'two/SKILL.md': 'two' })), { code: 'multiplePersonas' });
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'README.md': 'instructions', 'persona.md': 'no entry' })), { code: 'missingSkill' });
+});
+
+test('nested backups and macOS metadata do not replace the selected persona', async () => {
+  const parsed = await helpers.readPersonaSkill(zipped({
+    'SKILL.md': longPrompt, 'versions/old/SKILL.md': 'old', '__MACOSX/SKILL.md': 'metadata', '.hidden/SKILL.md': 'hidden',
+  }));
+  assert.equal(parsed.prompt, longPrompt);
+  assert.equal(parsed.ignoredFiles, 3);
+});
+
+test('the combined persona must fit the same UTF-8 capacity as a single file', async () => {
+  await assert.rejects(helpers.readPersonaSkill(zipped({
+    'SKILL.md': '甲'.repeat(12000), 'persona.md': '乙'.repeat(12000),
+  })), { code: 'tooLarge' });
+});
+
+test('ZIP limits are checked before reading and before expanding oversized entries', async () => {
+  let attempted = false;
+  await assert.rejects(helpers.readPersonaSkill({ name: 'large.zip', size: 8 * 1024 * 1024 + 1, arrayBuffer: () => { attempted = true; } }), { code: 'archiveTooLarge' });
+  assert.equal(attempted, false);
+  await assert.rejects(helpers.readPersonaSkill(zipped(Object.fromEntries(Array.from({ length: 257 }, (_, index) => [`${index}.txt`, 'small'])))), { code: 'archiveTooLarge' });
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'SKILL.md': 'x'.repeat(262145) })), { code: 'fileTooLarge' });
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'SKILL.md': 'small', 'raw.bin': new Uint8Array(16 * 1024 * 1024) })), { code: 'archiveTooLarge' });
+});
+
+test('ZIP rejects unsafe paths, case collisions and symbolic links without extracting anything', async () => {
+  for (const name of ['../SKILL.md', '/SKILL.md', 'C:/SKILL.md', 'a/../SKILL.md']) {
+    await assert.rejects(helpers.readPersonaSkill(zipped({ [name]: 'text' })), { code: 'invalidArchive' });
+  }
+  await assert.rejects(helpers.readPersonaSkill(zipped({ 'SKILL.md': 'text', 'skill.md': 'other' })), { code: 'invalidArchive' });
+  const link = zipSync({ 'SKILL.md': [strToU8('outside.md'), { os: 3, attrs: 0xa1ff << 16 }] });
+  await assert.rejects(helpers.readPersonaSkill(file(link, 'link.zip')), { code: 'unsupportedArchive' });
+});
+
+test('CRC damage and truncated archives are rejected instead of importing altered text', async () => {
+  const bytes = zipSync({ 'SKILL.md': strToU8('original plain text') }, { level: 0 });
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const dataAt = 30 + view.getUint16(26, true) + view.getUint16(28, true);
+  bytes[dataAt] ^= 1;
+  await assert.rejects(helpers.readPersonaSkill(file(bytes, 'damaged.zip')), { code: 'invalidArchive' });
+  await assert.rejects(helpers.readPersonaSkill(file(bytes.subarray(0, bytes.length - 15), 'truncated.zip')), { code: 'invalidArchive' });
+});
+
+test('forged declared size is bounded by actual streaming output', async () => {
+  const bytes = zipSync({ 'SKILL.md': strToU8('x'.repeat(1024 * 1024)) });
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const end = bytes.length - 22;
+  const central = view.getUint32(end + 16, true);
+  view.setUint32(central + 24, 10, true);
+  view.setUint32(22, 10, true);
+  await assert.rejects(helpers.readPersonaSkill(file(bytes, 'forged.zip')), { code: 'fileTooLarge' });
 });
 
 test('selection previews without mutating the role; confirmation emits exactly the full prompt', async () => {

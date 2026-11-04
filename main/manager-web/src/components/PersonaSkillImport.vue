@@ -18,7 +18,7 @@
     <input
       ref="fileInput"
       type="file"
-      accept=".md,.txt,.json"
+      accept=".zip,.skill,.md,.txt,.json"
       hidden
       :disabled="disabled"
       :aria-label="$t('personaSkill.importButton')"
@@ -33,6 +33,7 @@
       :title="$t('personaSkill.previewTitle')"
       :visible.sync="previewVisible"
       custom-class="persona-skill-dialog"
+      top="6vh"
       :close-on-click-modal="false"
       append-to-body
       @closed="clearPreview"
@@ -51,10 +52,26 @@
         <p v-if="preview.strippedFrontmatter" class="persona-skill-help">
           {{ $t('personaSkill.metadataRemoved') }}
         </p>
+        <div v-if="preview.archive" class="persona-skill-archive-details">
+          <p class="persona-skill-help">{{ $t(`personaSkill.archiveModes.${preview.strategy}`) }}</p>
+          <p class="persona-skill-source-label">{{ $t('personaSkill.sourceFiles') }}</p>
+          <ul class="persona-skill-sources">
+            <li v-for="name in preview.usedFiles" :key="name">{{ name }}</li>
+          </ul>
+          <p v-if="preview.verifiedFiles.length" class="persona-skill-help">
+            {{ $t('personaSkill.verifiedFiles') }} {{ preview.verifiedFiles.join('、') }}
+          </p>
+          <p v-if="preview.alreadyIncludedFiles.length" class="persona-skill-help">
+            {{ $t('personaSkill.alreadyIncluded') }} {{ preview.alreadyIncludedFiles.join('、') }}
+          </p>
+          <p v-if="preview.ignoredFiles" class="persona-skill-help">
+            {{ $t('personaSkill.otherFiles', { count: preview.ignoredFiles }) }}
+          </p>
+        </div>
         <el-input
           type="textarea"
           :value="preview.prompt"
-          :rows="12"
+          :rows="preview.archive ? 8 : 12"
           readonly
           resize="vertical"
           :aria-label="$t('personaSkill.previewTitle')"
@@ -149,10 +166,14 @@ export default {
 .persona-skill-file-details { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 16px 0; font-size: 13px; color: #606266; }
 .persona-skill-filename { color: #303133; font-weight: 600; overflow-wrap: anywhere; }
 .persona-skill-preview-text { margin-top: 8px; }
+.persona-skill-source-label { margin: 10px 0 4px; font-weight: 600; text-indent: 0; }
+.persona-skill-sources { margin: 0 0 8px; padding-left: 20px; max-height: 100px; overflow-y: auto; overflow-wrap: anywhere; }
+.persona-skill-archive-details p { overflow-wrap: anywhere; }
 </style>
 
 <style>
-.persona-skill-dialog { width: 720px; max-width: calc(100vw - 32px); }
-.persona-skill-dialog .el-dialog__body { padding-top: 12px; }
+.persona-skill-dialog { width: 720px; max-width: calc(100vw - 32px); max-height: 88vh; display: flex; flex-direction: column; }
+.persona-skill-dialog .el-dialog__body { padding-top: 12px; overflow-y: auto; min-height: 0; }
+.persona-skill-dialog .el-dialog__header, .persona-skill-dialog .el-dialog__footer { flex-shrink: 0; }
 .persona-skill-dialog .el-textarea__inner { line-height: 1.7; }
 </style>

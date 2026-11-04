@@ -130,4 +130,101 @@ const ptBR = {
   },
 };
 
-export default { zh_CN: zhCN, zh_TW: zhTW, en, de, vi, pt_BR: ptBR };
+const messages = { zh_CN: zhCN, zh_TW: zhTW, en, de, vi, pt_BR: ptBR };
+const archiveMessages = {
+  zh_CN: {
+    help: '可直接上传 ZIP／.skill 人格包，也支持 MD、TXT 和角色 JSON。预览后保存配置生效。',
+    sourceFiles: '本次正文来源：', verifiedFiles: '已核对同版正文：', alreadyIncluded: '已包含，未重复加入：',
+    otherFiles: '其他 {count} 个文件未加入角色正文；聊天记录、图片和脚本不会自动接入。',
+    archiveModes: { prepared: '已采用包内合并好的完整正文，原始档案不会重复加入。', combined: '已读取 SKILL.md，并检查同目录的人格和记忆文件。' },
+    errors: {
+      unsupportedFile: '请选择 ZIP、.skill、MD、TXT 或角色 JSON；7z、RAR、tar.gz 请先转为 ZIP。',
+      invalidArchive: 'ZIP 包损坏、校验失败或路径无效，请重新打包后上传。',
+      unsupportedArchive: '请使用未加密、未分卷的普通 ZIP 包，包内不支持符号链接。',
+      archiveTooLarge: '人格包最多 8 MB、256 项，展开后最多 16 MB；请将大量原始记录和图片单独保留。',
+      missingSkill: '包内未找到 SKILL.md、full-system-prompt.txt 或 agent-patch.json。',
+      multiplePersonas: '包内发现多个人格入口，请每个人格单独打包后导入。',
+      conflictingPrompts: '包内完整 TXT 与角色 JSON 正文不一致，请核对版本后重新打包。',
+    },
+  },
+  zh_TW: {
+    help: '可直接上傳 ZIP／.skill 人格包，也支援 MD、TXT 和角色 JSON。預覽後儲存設定生效。',
+    sourceFiles: '本次正文來源：', verifiedFiles: '已核對同版正文：', alreadyIncluded: '已包含，未重複加入：',
+    otherFiles: '其他 {count} 個檔案未加入角色正文；聊天記錄、圖片和腳本不會自動接入。',
+    archiveModes: { prepared: '已採用包內合併好的完整正文，原始檔案不會重複加入。', combined: '已讀取 SKILL.md，並檢查同目錄的人格和記憶檔案。' },
+    errors: {
+      unsupportedFile: '請選擇 ZIP、.skill、MD、TXT 或角色 JSON；7z、RAR、tar.gz 請先轉為 ZIP。',
+      invalidArchive: 'ZIP 包損壞、校驗失敗或路徑無效，請重新打包後上傳。',
+      unsupportedArchive: '請使用未加密、未分卷的普通 ZIP 包，包內不支援符號連結。',
+      archiveTooLarge: '人格包最多 8 MB、256 項，展開後最多 16 MB；大量原始記錄和圖片請分開保留。',
+      missingSkill: '包內未找到 SKILL.md、full-system-prompt.txt 或 agent-patch.json。',
+      multiplePersonas: '包內有多個人格入口，請每個人格分開打包後匯入。',
+      conflictingPrompts: '包內完整 TXT 與角色 JSON 正文不一致，請核對版本後重新打包。',
+    },
+  },
+  en: {
+    help: 'Upload a ZIP/.skill persona package, MD, TXT or persona JSON. Preview it, then save the configuration.',
+    sourceFiles: 'Persona text from:', verifiedFiles: 'Matching text verified:', alreadyIncluded: 'Already included, not duplicated:',
+    otherFiles: '{count} other files were not added to the persona. Chat archives, images and scripts are not connected automatically.',
+    archiveModes: { prepared: 'Using the complete prepared text; source copies are not added again.', combined: 'Read SKILL.md and checked persona and memory files in the same folder.' },
+    errors: {
+      unsupportedFile: 'Choose ZIP, .skill, MD, TXT or persona JSON. Convert 7z, RAR and tar.gz packages to ZIP first.',
+      invalidArchive: 'The ZIP is damaged, failed verification or contains invalid paths. Repack it and try again.',
+      unsupportedArchive: 'Use an unencrypted, single-volume ZIP without symbolic links.',
+      archiveTooLarge: 'Limit: 8 MB, 256 entries and 16 MB unpacked. Keep large chat archives and images separately.',
+      missingSkill: 'No SKILL.md, full-system-prompt.txt or agent-patch.json was found.',
+      multiplePersonas: 'Multiple personas were found. Package and import each persona separately.',
+      conflictingPrompts: 'The prepared TXT and persona JSON differ. Check their versions and repack.',
+    },
+  },
+  de: {
+    help: 'ZIP/.skill-Paket, MD, TXT oder Persona-JSON hochladen, prüfen und anschließend die Konfiguration speichern.',
+    sourceFiles: 'Persona-Text aus:', verifiedFiles: 'Gleicher Text geprüft:', alreadyIncluded: 'Bereits enthalten, nicht doppelt eingefügt:',
+    otherFiles: '{count} weitere Dateien wurden nicht eingefügt. Chatarchive, Bilder und Skripte werden nicht automatisch eingebunden.',
+    archiveModes: { prepared: 'Der vorbereitete vollständige Text wird verwendet; Quelldateien werden nicht doppelt eingefügt.', combined: 'SKILL.md wurde gelesen und Persona- sowie Gedächtnisdateien im selben Ordner geprüft.' },
+    errors: {
+      unsupportedFile: 'ZIP, .skill, MD, TXT oder Persona-JSON auswählen. 7z, RAR und tar.gz bitte zuerst in ZIP umwandeln.',
+      invalidArchive: 'Das ZIP ist beschädigt, enthält ungültige Pfade oder hat die Prüfung nicht bestanden. Bitte neu packen.',
+      unsupportedArchive: 'Ein unverschlüsseltes, ungeteiltes ZIP ohne symbolische Links verwenden.',
+      archiveTooLarge: 'Maximal 8 MB, 256 Einträge und 16 MB entpackt. Große Chatarchive und Bilder separat aufbewahren.',
+      missingSkill: 'SKILL.md, full-system-prompt.txt oder agent-patch.json wurde nicht gefunden.',
+      multiplePersonas: 'Mehrere Personas gefunden. Bitte jede Persona separat packen und importieren.',
+      conflictingPrompts: 'Der vorbereitete TXT- und JSON-Text unterscheiden sich. Versionen prüfen und neu packen.',
+    },
+  },
+  vi: {
+    help: 'Tải lên gói ZIP/.skill, MD, TXT hoặc JSON nhân vật. Xem trước rồi lưu cấu hình.',
+    sourceFiles: 'Nguồn nội dung nhân vật:', verifiedFiles: 'Đã xác nhận nội dung giống nhau:', alreadyIncluded: 'Đã có trong nội dung, không thêm trùng:',
+    otherFiles: 'Không thêm {count} tệp khác vào nội dung nhân vật. Lịch sử trò chuyện, ảnh và mã lệnh không tự động được kết nối.',
+    archiveModes: { prepared: 'Dùng toàn bộ nội dung đã tổng hợp, không thêm trùng các tệp nguồn.', combined: 'Đã đọc SKILL.md và kiểm tra các tệp nhân vật, ký ức trong cùng thư mục.' },
+    errors: {
+      unsupportedFile: 'Chọn ZIP, .skill, MD, TXT hoặc JSON nhân vật. Hãy chuyển 7z, RAR và tar.gz sang ZIP trước.',
+      invalidArchive: 'ZIP bị hỏng, kiểm tra thất bại hoặc có đường dẫn không hợp lệ. Hãy đóng gói lại.',
+      unsupportedArchive: 'Dùng ZIP không mã hóa, không chia phần và không chứa liên kết tượng trưng.',
+      archiveTooLarge: 'Tối đa 8 MB, 256 mục và 16 MB sau giải nén. Giữ riêng lịch sử trò chuyện và ảnh lớn.',
+      missingSkill: 'Không tìm thấy SKILL.md, full-system-prompt.txt hoặc agent-patch.json.',
+      multiplePersonas: 'Có nhiều nhân vật. Hãy đóng gói và nhập từng nhân vật riêng.',
+      conflictingPrompts: 'Nội dung TXT tổng hợp và JSON không giống nhau. Kiểm tra phiên bản rồi đóng gói lại.',
+    },
+  },
+  pt_BR: {
+    help: 'Envie um pacote ZIP/.skill, MD, TXT ou JSON de personalidade. Confira a prévia e salve a configuração.',
+    sourceFiles: 'Origem do texto:', verifiedFiles: 'Texto idêntico verificado:', alreadyIncluded: 'Já incluído, sem duplicar:',
+    otherFiles: '{count} outros arquivos não foram adicionados. Históricos de conversa, imagens e scripts não são conectados automaticamente.',
+    archiveModes: { prepared: 'Usando o texto completo já preparado, sem duplicar os arquivos de origem.', combined: 'SKILL.md foi lido e os arquivos de personalidade e memória na mesma pasta foram verificados.' },
+    errors: {
+      unsupportedFile: 'Escolha ZIP, .skill, MD, TXT ou JSON de personalidade. Converta 7z, RAR e tar.gz para ZIP primeiro.',
+      invalidArchive: 'O ZIP está danificado, falhou na verificação ou contém caminhos inválidos. Compacte novamente.',
+      unsupportedArchive: 'Use um ZIP sem criptografia, sem divisão em volumes e sem links simbólicos.',
+      archiveTooLarge: 'Máximo de 8 MB, 256 entradas e 16 MB descompactados. Mantenha históricos grandes e imagens separados.',
+      missingSkill: 'SKILL.md, full-system-prompt.txt ou agent-patch.json não foi encontrado.',
+      multiplePersonas: 'Foram encontradas várias personalidades. Compacte e importe cada uma separadamente.',
+      conflictingPrompts: 'Os textos TXT e JSON preparados são diferentes. Confira as versões e compacte novamente.',
+    },
+  },
+};
+for (const [locale, copy] of Object.entries(archiveMessages)) {
+  const errors = { ...messages[locale].errors, ...copy.errors };
+  Object.assign(messages[locale], copy, { errors });
+}
+export default messages;
