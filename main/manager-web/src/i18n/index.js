@@ -6,6 +6,7 @@ import en from './en';
 import de from './de';
 import vi from './vi';
 import ptBR from './pt_BR';
+import personaSkill from './personaSkill';
 
 import enLocale from 'element-ui/lib/locale/lang/en'
 import zhLocale from 'element-ui/lib/locale/lang/zh-CN'
@@ -46,12 +47,12 @@ const i18n = new VueI18n({
   locale: getDefaultLanguage(),
   fallbackLocale: 'zh_CN',
   messages: {
-    'zh_CN': { ...zhLocale, ...zhCN },
-    'zh_TW': { ...twLocale, ...zhTW },
-    'en': { ...en, ...enLocale },
-    'de': { ...de, ...deLocale },
-    'vi': { ...vi, ...viLocale },
-    'pt_BR': { ...ptBR, ...ptBRLocale }
+    'zh_CN': { ...zhLocale, ...zhCN, personaSkill: personaSkill.zh_CN },
+    'zh_TW': { ...twLocale, ...zhTW, personaSkill: personaSkill.zh_TW },
+    'en': { ...en, ...enLocale, personaSkill: personaSkill.en },
+    'de': { ...de, ...deLocale, personaSkill: personaSkill.de },
+    'vi': { ...vi, ...viLocale, personaSkill: personaSkill.vi },
+    'pt_BR': { ...ptBR, ...ptBRLocale, personaSkill: personaSkill.pt_BR }
   }
 });
 

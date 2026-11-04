@@ -1,0 +1,133 @@
+const zhCN = {
+  importButton: '导入人格 Skill',
+  help: '支持 SKILL.md、TXT 或角色 JSON。导入后点击“保存配置”生效；聊天记录请放入知识库。',
+  size: '{characters} 字 · {bytes} / {limit} 字节',
+  previewTitle: '预览人格 Skill',
+  replaceNotice: '将替换“{agent}”的角色介绍。确认导入后，请点击“保存配置”。',
+  metadataRemoved: '已移除 Skill 注册信息，保留完整人格正文。',
+  cancel: '取消',
+  apply: '填入角色介绍',
+  applied: '已填入完整人格，请点击“保存配置”使其生效。',
+  errors: {
+    unsupportedFile: '请选择 .md、.txt 或 .json 文件；压缩包请先解压后选择完整人格正文。',
+    fileTooLarge: '文件超过 256 KB。请选择人格正文，原始聊天记录请放入知识库。',
+    empty: '文件没有可导入的人格正文。',
+    invalidEncoding: '文件不是有效的 UTF-8 文本，请转换编码后重试。',
+    invalidJson: '角色 JSON 必须包含字符串类型的 systemPrompt；不能直接导入原始聊天记录。',
+    tooLarge: '角色介绍超过 65,535 字节，无法保存；请精简正文，将详细聊天记录放入知识库。',
+    invalidText: '角色介绍含无效字符，请检查文件内容。',
+    readFailed: '无法读取文件，请重新选择。',
+  },
+};
+
+const en = {
+  importButton: 'Import persona Skill',
+  help: 'Choose SKILL.md, TXT or persona JSON, then Save configuration. Put chat archives in the knowledge base.',
+  size: '{characters} characters · {bytes} / {limit} bytes',
+  previewTitle: 'Preview persona Skill',
+  replaceNotice: 'This replaces the role introduction for “{agent}”. Click Save configuration after importing.',
+  metadataRemoved: 'Skill registration metadata removed; the full persona text is retained.',
+  cancel: 'Cancel',
+  apply: 'Use as role introduction',
+  applied: 'Full persona added. Click Save configuration to apply it.',
+  errors: {
+    unsupportedFile: 'Choose an .md, .txt or .json file. Extract archives and select the complete persona text first.',
+    fileTooLarge: 'The file exceeds 256 KB. Select persona text; put full chat archives in the knowledge base.',
+    empty: 'The file contains no persona text.',
+    invalidEncoding: 'The file is not valid UTF-8. Convert its encoding and try again.',
+    invalidJson: 'Persona JSON must contain a systemPrompt string. Raw chat archives cannot be imported here.',
+    tooLarge: 'The role introduction exceeds 65,535 bytes. Shorten it and put detailed chat archives in the knowledge base.',
+    invalidText: 'The role introduction contains invalid characters. Check the file contents.',
+    readFailed: 'Unable to read the file. Select it again.',
+  },
+};
+
+const zhTW = {
+  importButton: '匯入人格 Skill',
+  help: '支援 SKILL.md、TXT 或角色 JSON。匯入後點擊「儲存設定」生效；聊天記錄請放入知識庫。',
+  size: '{characters} 字 · {bytes} / {limit} 位元組',
+  previewTitle: '預覽人格 Skill',
+  replaceNotice: '將取代「{agent}」的角色介紹。確認匯入後，請點擊「儲存設定」。',
+  metadataRemoved: '已移除 Skill 註冊資訊，保留完整人格正文。',
+  cancel: '取消',
+  apply: '填入角色介紹',
+  applied: '已填入完整人格，請點擊「儲存設定」使其生效。',
+  errors: {
+    unsupportedFile: '請選擇 .md、.txt 或 .json 檔案；壓縮包請先解壓縮後選擇完整人格正文。',
+    fileTooLarge: '檔案超過 256 KB。請選擇人格正文，原始聊天記錄請放入知識庫。',
+    empty: '檔案沒有可匯入的人格正文。',
+    invalidEncoding: '檔案不是有效的 UTF-8 文字，請轉換編碼後重試。',
+    invalidJson: '角色 JSON 必須包含字串類型的 systemPrompt；不能直接匯入原始聊天記錄。',
+    tooLarge: '角色介紹超過 65,535 位元組，無法儲存；請精簡正文，將詳細聊天記錄放入知識庫。',
+    invalidText: '角色介紹含無效字元，請檢查檔案內容。',
+    readFailed: '無法讀取檔案，請重新選擇。',
+  },
+};
+
+const de = {
+  importButton: 'Persona-Skill importieren',
+  help: 'SKILL.md, TXT oder Persona-JSON auswählen und anschließend die Konfiguration speichern. Chatarchive gehören in die Wissensdatenbank.',
+  size: '{characters} Zeichen · {bytes} / {limit} Bytes',
+  previewTitle: 'Persona-Skill-Vorschau',
+  replaceNotice: 'Die Rollenbeschreibung für „{agent}“ wird ersetzt. Anschließend bitte die Konfiguration speichern.',
+  metadataRemoved: 'Die Skill-Metadaten wurden entfernt. Der vollständige Persona-Text bleibt erhalten.',
+  cancel: 'Abbrechen',
+  apply: 'Als Rollenbeschreibung verwenden',
+  applied: 'Die vollständige Persona wurde eingefügt. Bitte die Konfiguration speichern.',
+  errors: {
+    unsupportedFile: 'Bitte eine .md-, .txt- oder .json-Datei auswählen. Archive zuerst entpacken und den vollständigen Persona-Text auswählen.',
+    fileTooLarge: 'Die Datei überschreitet 256 KB. Bitte nur den Persona-Text auswählen und Chatarchive in der Wissensdatenbank ablegen.',
+    empty: 'Die Datei enthält keinen Persona-Text.',
+    invalidEncoding: 'Die Datei ist kein gültiger UTF-8-Text. Bitte die Kodierung konvertieren und erneut versuchen.',
+    invalidJson: 'Persona-JSON muss systemPrompt als Zeichenfolge enthalten. Rohe Chatarchive können hier nicht importiert werden.',
+    tooLarge: 'Die Rollenbeschreibung überschreitet 65.535 Bytes. Bitte kürzen und ausführliche Chatarchive in der Wissensdatenbank ablegen.',
+    invalidText: 'Die Rollenbeschreibung enthält ungültige Zeichen. Bitte die Datei prüfen.',
+    readFailed: 'Die Datei konnte nicht gelesen werden. Bitte erneut auswählen.',
+  },
+};
+
+const vi = {
+  importButton: 'Nhập Skill nhân vật',
+  help: 'Chọn SKILL.md, TXT hoặc JSON nhân vật, sau đó lưu cấu hình. Lưu lịch sử trò chuyện vào kho kiến thức.',
+  size: '{characters} ký tự · {bytes} / {limit} byte',
+  previewTitle: 'Xem trước Skill nhân vật',
+  replaceNotice: 'Nội dung này sẽ thay thế phần giới thiệu vai trò của “{agent}”. Sau khi nhập, hãy lưu cấu hình.',
+  metadataRemoved: 'Đã bỏ thông tin đăng ký Skill và giữ nguyên toàn bộ nội dung nhân vật.',
+  cancel: 'Hủy',
+  apply: 'Dùng làm giới thiệu vai trò',
+  applied: 'Đã điền toàn bộ nội dung nhân vật. Hãy lưu cấu hình để áp dụng.',
+  errors: {
+    unsupportedFile: 'Chọn tệp .md, .txt hoặc .json. Hãy giải nén và chọn toàn bộ nội dung nhân vật trước.',
+    fileTooLarge: 'Tệp vượt quá 256 KB. Hãy chọn nội dung nhân vật và lưu lịch sử trò chuyện vào kho kiến thức.',
+    empty: 'Tệp không có nội dung nhân vật.',
+    invalidEncoding: 'Tệp không phải văn bản UTF-8 hợp lệ. Hãy chuyển đổi mã hóa rồi thử lại.',
+    invalidJson: 'JSON nhân vật phải có chuỗi systemPrompt. Không thể nhập trực tiếp lịch sử trò chuyện tại đây.',
+    tooLarge: 'Giới thiệu vai trò vượt quá 65.535 byte. Hãy rút gọn và lưu lịch sử trò chuyện chi tiết vào kho kiến thức.',
+    invalidText: 'Giới thiệu vai trò có ký tự không hợp lệ. Hãy kiểm tra nội dung tệp.',
+    readFailed: 'Không thể đọc tệp. Hãy chọn lại.',
+  },
+};
+
+const ptBR = {
+  importButton: 'Importar Skill de personalidade',
+  help: 'Escolha SKILL.md, TXT ou JSON de personalidade e salve a configuração. Coloque os históricos de conversa na base de conhecimento.',
+  size: '{characters} caracteres · {bytes} / {limit} bytes',
+  previewTitle: 'Prévia da Skill de personalidade',
+  replaceNotice: 'Isto substituirá a apresentação do personagem “{agent}”. Salve a configuração após importar.',
+  metadataRemoved: 'Os metadados da Skill foram removidos; o texto completo da personalidade foi mantido.',
+  cancel: 'Cancelar',
+  apply: 'Usar como apresentação do personagem',
+  applied: 'Personalidade completa inserida. Salve a configuração para aplicar.',
+  errors: {
+    unsupportedFile: 'Escolha um arquivo .md, .txt ou .json. Primeiro extraia os arquivos compactados e selecione o texto completo da personalidade.',
+    fileTooLarge: 'O arquivo ultrapassa 256 KB. Selecione o texto da personalidade e coloque os históricos de conversa na base de conhecimento.',
+    empty: 'O arquivo não contém texto de personalidade.',
+    invalidEncoding: 'O arquivo não é um texto UTF-8 válido. Converta a codificação e tente novamente.',
+    invalidJson: 'O JSON de personalidade deve conter systemPrompt como texto. Históricos de conversa não podem ser importados diretamente aqui.',
+    tooLarge: 'A apresentação ultrapassa 65.535 bytes. Reduza o texto e coloque os históricos detalhados na base de conhecimento.',
+    invalidText: 'A apresentação contém caracteres inválidos. Verifique o conteúdo do arquivo.',
+    readFailed: 'Não foi possível ler o arquivo. Selecione-o novamente.',
+  },
+};
+
+export default { zh_CN: zhCN, zh_TW: zhTW, en, de, vi, pt_BR: ptBR };

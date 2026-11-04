@@ -132,9 +132,13 @@
                         resize="none"
                         :placeholder="$t('roleConfig.pleaseEnterContent')"
                         v-model="form.systemPrompt"
-                        maxlength="2000"
-                        show-word-limit
                         class="form-textarea"
+                      />
+                      <persona-skill-import
+                        :key="$route.query.agentId"
+                        v-model="form.systemPrompt"
+                        :agent-name="form.agentName"
+                        :disabled="configInteractionBlocked"
                       />
                     </el-form-item>
 
@@ -502,10 +506,12 @@ import HeaderBar from "@/components/HeaderBar.vue";
 import i18n from "@/i18n";
 import featureManager from "@/utils/featureManager"; 
 import VersionFooter from "@/components/VersionFooter.vue";
+import PersonaSkillImport from "@/components/PersonaSkillImport.vue";
+import { systemPromptProblem } from "@/utils/personaSkill";
 
 export default {
   name: "RoleConfigPage",
-  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, NixiDaughterSettings, NixiAccessPolicySettings, VersionFooter },
+  components: { HeaderBar, FunctionDialog, ContextProviderDialog, TtsAdvancedSettings, AgentSnapshotDialog, NixiDaughterSettings, NixiAccessPolicySettings, VersionFooter, PersonaSkillImport },
   data() {
     return {
       showContextProviderDialog: false,
@@ -632,6 +638,11 @@ export default {
     },
     async saveConfig() {
       if (this.configInteractionBlocked) {
+        return;
+      }
+      const promptProblem = systemPromptProblem(this.form.systemPrompt);
+      if (promptProblem) {
+        this.$message.error(this.$t(`personaSkill.errors.${promptProblem}`));
         return;
       }
       const configData = {
